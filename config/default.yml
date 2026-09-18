@@ -1,0 +1,86 @@
+# =====================================================================
+# MarketEngine — run configuration
+#
+# Everything the pipeline does is decided here. There are no tickers,
+# dates, or windows hard-coded anywhere in the package: change this file
+# (or pass --config your_own.yml) and re-run. The file's SHA-256 goes
+# into reports/run_manifest.json, so any output can be traced back to the
+# exact config that produced it.
+# =====================================================================
+
+# Names the run. Outputs land under data/<...>/<run_id>/ and
+# reports/<run_id>/, so two configs can coexist without overwriting
+# each other.
+run_id: baseline
+
+# yfinance | alpaca — see marketengine/providers/. Both implement the
+# same interface, so this is the only line that has to change.
+provider: yfinance
+
+universe:
+  # The configurable set of instruments. A deliberate mix of single
+  # stocks and ETFs across sectors, so the correlation matrix has
+  # something to say.
+  tickers:
+    - AAPL
+    - MSFT
+    - NVDA
+    - JPM
+    - XOM
+    - JNJ
+    - QQQ
+    - IWM
+    - TLT
+    - GLD
+  # Every relative metric in analytics.py is measured against this, and
+  # it also defines the trading calendar (see calendar.align below).
+  benchmark: SPY
+
+window:
+  start: "2015-01-01"
+  # null means "up to the most recent available close". Pin it to a date
+  # for a frozen, byte-reproducible run.
+  end: null
+
+calendar:
+  # benchmark  — keep only dates the benchmark traded (recommended: the
+  #              benchmark defines "a trading day", and a date the
+  #              benchmark did not trade cannot produce a relative metric)
+  # intersect  — keep only dates EVERY ticker traded (strictest; throws
+  #              away history for a late-listed name)
+  # union      — keep every date any ticker traded (loosest; leaves holes)
+  align: benchmark
+  # A real halt or a missing vendor bar gets carried forward this many
+  # days before we give up and leave a NaN. Deliberately small: a long
+  # forward fill invents a flat price, which reads as zero volatility.
+  max_ffill_days: 3
+
+analytics:
+  # Annualised rolling volatility is reported at each of these windows.
+  rolling_vol_windows: [21, 63, 252]
+  # Window for the rolling correlation-to-benchmark series.
+  corr_window: 63
+  # Annual risk-free rate used for Sharpe and for CAPM alpha. 0.02 is a
+  # stand-in; swap in a real T-bill series if you want it exact.
+  risk_free_annual: 0.02
+  trading_days_per_year: 252
+  # A ticker with less history than this is still stored and still
+  # charted, but it is excluded from the full-period correlation matrix,
+  # where a short overlap produces a confidently wrong number.
+  min_history_days: 250
+  # |daily return| above this is flagged in the data-quality report.
+  # Flagged, not dropped: a 60% move is usually real (earnings, a
+  # biotech readout) and silently deleting it is the actual error.
+  extreme_return_threshold: 0.35
+
+storage:
+  # Root for everything the pipeline writes. Gitignored.
+  root: data
+  # DuckDB file holding views over the curated Parquet, so the panel is
+  # queryable with SQL without loading it into pandas first.
+  duckdb_file: marketengine.duckdb
+
+outputs:
+  figures: true
+  # PNG dots-per-inch for saved figures.
+  dpi: 150

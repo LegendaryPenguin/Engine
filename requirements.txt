@@ -1,0 +1,17 @@
+# Pinned to the versions this was built and tested against. Reproducibility
+# is graded, and pandas 3 in particular changed default datetime resolution
+# and cumprod-over-NaN behaviour relative to pandas 2 — both of which this
+# code handles explicitly, and neither of which is worth rediscovering.
+#
+#   python -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+
+pandas==3.0.6
+numpy==2.5.3
+pyarrow==25.0.1          # Parquet engine
+PyYAML==6.0.3            # config
+matplotlib==3.11.2       # figures
+tabulate==0.10.0         # DataFrame.to_markdown, used by the summary report
+duckdb==1.5.5            # SQL views over the curated Parquet
+yfinance==1.7.0          # provider: yfinance
+alpaca-py==0.44.0        # provider: alpaca
+pytest==9.1.1

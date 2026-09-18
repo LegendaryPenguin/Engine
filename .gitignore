@@ -1,0 +1,18 @@
+# Credentials. Never committed; see .env.example for the shape.
+.env
+
+# Everything the pipeline downloads or derives. All of it is reproducible
+# from the config plus a network connection, so none of it belongs in git.
+data/
+
+# Generated reports are ignored EXCEPT the baseline run, which is committed
+# so the deliverable is readable on GitHub without running anything.
+reports/*
+!reports/baseline/
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store

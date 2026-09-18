@@ -1,0 +1,64 @@
+# =====================================================================
+# MarketEngine — the same pipeline against Alpaca instead of Yahoo.
+#
+# The only substantive difference from default.yml is `provider`. That is
+# the point of the config: swapping the data vendor is one line, not a code
+# change, because both providers return the same schema.
+#
+#   python -m marketengine --config config/alpaca.yml run
+#
+# Needs credentials in .env (see .env.example). Paper keys work — this only
+# reads market data.
+#
+# Two things to know before comparing the outputs to the yfinance run:
+#
+#   - The free tier serves the IEX feed. Its closes track the consolidated
+#     tape closely, but daily VOLUME is IEX-only (roughly 2-3% of the real
+#     number) and open/high/low are IEX prints. Do not build a
+#     volume-based signal on this feed.
+#   - IEX history is shallow compared to Yahoo's, so the window starts in
+#     2016 rather than 2015. A shorter start is honest about what the free
+#     tier actually has; asking for more just produces a front gap that
+#     the ingest report then reports every run.
+# =====================================================================
+
+run_id: alpaca
+provider: alpaca
+
+universe:
+  tickers:
+    - AAPL
+    - MSFT
+    - NVDA
+    - JPM
+    - XOM
+    - JNJ
+    - QQQ
+    - IWM
+    - TLT
+    - GLD
+  benchmark: SPY
+
+window:
+  start: "2016-01-01"
+  end: null
+
+calendar:
+  align: benchmark
+  max_ffill_days: 3
+
+analytics:
+  rolling_vol_windows: [21, 63, 252]
+  corr_window: 63
+  risk_free_annual: 0.02
+  trading_days_per_year: 252
+  min_history_days: 250
+  extreme_return_threshold: 0.35
+
+storage:
+  root: data
+  duckdb_file: marketengine.duckdb
+
+outputs:
+  figures: true
+  dpi: 150
