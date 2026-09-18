@@ -1,6 +1,6 @@
 $ ./.venv/bin/pytest -q
 
-...........ss........................................................... [ 58%]
+........................................................................ [ 58%]
 ...................................................                      [100%]
 =============================== warnings summary ===============================
 tests/test_alpaca.py::test_missing_credentials_are_a_clear_provider_error
@@ -15,9 +15,9 @@ tests/test_bench.py::test_render_and_to_json_survive_a_measurement
     c /= stddev[:, None]
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-121 passed, 2 skipped, 5 warnings in 1.29s
-real 1.50
-user 1.06
-sys 0.21
+123 passed, 5 warnings in 1.44s
+real 1.66
+user 0.94
+sys 0.17
 
 [exit code: 0]

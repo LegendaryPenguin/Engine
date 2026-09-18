@@ -2,7 +2,7 @@ $ ./.venv/bin/python -m marketengine bench --refresh --trials 7 --json submissio
 
   provider: yfinance | 11 symbol(s) to fetch, 0 already current
 environment
-  timestamp_utc    2026-09-18T17:56:50+00:00
+  timestamp_utc    2026-09-18T18:27:51+00:00
   python           3.12.14
   platform         Darwin 25.6.0 (arm64)
   pandas           3.0.6
@@ -14,22 +14,22 @@ environment
 
 stage timings
   stage              seconds        rows      rows/sec
-  ingest               0.731      32,395        44,313
-  read_raw             0.025      32,395     1,300,630
-  clean                0.051      32,395       638,238
-  write_curated        0.010      32,395     3,181,100
-  analytics            0.026      32,384     1,222,168
-  TOTAL                0.843
+  ingest               0.804      32,395        40,279
+  read_raw             0.011      32,395     2,921,945
+  clean                0.052      32,395       625,532
+  write_curated        0.010      32,395     3,380,039
+  analytics            0.027      32,384     1,208,234
+  TOTAL                0.904
 
 provider fetch latency (one symbol, last 7 calendar days)
   trials           7.0
   symbol_count     1.0
   rows_per_request 6.0
-  cold_ms          234.5
-  p50_ms           124.6
-  p95_ms           189.9
-  max_ms           189.9
-  mean_ms          128.8
+  cold_ms          101.2
+  p50_ms           118.2
+  p95_ms           354.1
+  max_ms           354.1
+  mean_ms          186.1
 
 data freshness
   expected last session   2026-09-17
@@ -56,8 +56,8 @@ data freshness
 note: 11 symbols, 16 quality events, 32,395 curated rows
 
 json -> submission/milestone1/06_latency_cold.json
-real 2.52
-user 1.04
-sys 0.22
+real 2.70
+user 0.96
+sys 0.21
 
 [exit code: 0]

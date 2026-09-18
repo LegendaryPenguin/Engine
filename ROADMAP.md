@@ -47,9 +47,9 @@ data freshness.
 | # | Criterion | Status |
 |---|---|---|
 | 1.1 | Universe, window, benchmark and every threshold come from YAML; no ticker or date literal anywhere in `marketengine/` | pass |
-| 1.2 | A second provider runs the same pipeline with one line changed, and its merge logic is unit-tested against stub responses | pass — `config/alpaca.yml`, `tests/test_alpaca.py` |
+| 1.2 | A second provider runs the same pipeline with one line changed, and its merge logic is unit-tested against stub responses | pass — `config/alpaca.yml`, `tests/test_alpaca.py`, and verified against the live API: 16,931 bars, 11 symbols, 2020-08-03 → 2026-09-18 |
 | 1.3 | Re-running on the same day makes zero network calls; re-running tomorrow fetches one session | pass — verified, `_requests.json` front-coverage |
-| 1.4 | Every analytics function has a closed-form test, not a snapshot of its own output | pass — 121 tests, 0 network |
+| 1.4 | Every analytics function has a closed-form test, not a snapshot of its own output | pass — 123 tests, only the 2 live-API ones use the network |
 | 1.5 | Every suspicious bar is named on the row and logged with its value; the only rows removed are structurally impossible ones | pass — `flags` column + `quality_events.csv` |
 | 1.6 | Output traceable to the exact config bytes that produced it | pass — SHA-256 in `run_manifest.json` |
 | 1.7 | Submission evidence generated from real terminal runs, not transcribed | pass — `submission/milestone1/` |
@@ -124,6 +124,14 @@ universe-construction bias that no amount of cleaning fixes.
   reveals.
 - Liquidity screen: 20-day median dollar volume, and a minimum price, both
   evaluated **as of the decision date** and not over the whole sample.
+- A **minimum-liquidity floor at admission**, separate from the screen
+  above, and a leading-gap check on the benchmark. Running the Alpaca
+  config from 2016 surfaced why: the free feed returns one SPY bar dated
+  2018-11-01 with a volume of 200 shares, then nothing for twenty months.
+  Coverage still reported 100% — the benchmark defines the calendar, so a
+  hole *in the benchmark* is invisible by construction. Every other
+  symbol's coverage is measured against a yardstick that the check cannot
+  itself validate.
 
 **Exit criteria**
 
@@ -135,6 +143,9 @@ universe-construction bias that no amount of cleaning fixes.
   returns different sets.
 - 3.4 The liquidity screen uses only data available before the decision date,
   proven by a test that shifts the input forward and sees the decision change.
+- 3.5 A benchmark with a leading gap is rejected rather than silently used as
+  the calendar. Tested with the real Alpaca case: one bar, a twenty-month
+  hole, then continuous data.
 
 ---
 

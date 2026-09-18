@@ -16,10 +16,19 @@
 #     tape closely, but daily VOLUME is IEX-only (roughly 2-3% of the real
 #     number) and open/high/low are IEX prints. Do not build a
 #     volume-based signal on this feed.
-#   - IEX history is shallow compared to Yahoo's, so the window starts in
-#     2016 rather than 2015. A shorter start is honest about what the free
-#     tier actually has; asking for more just produces a front gap that
-#     the ingest report then reports every run.
+#   - IEX history is shallow. Measured, not guessed: on a free key the
+#     first usable SPY bar is 2020-07-27, so this window starts there
+#     rather than at Yahoo's 2015. Expect ~1,545 sessions, not ~2,945.
+#
+# One artefact worth knowing about, because it is the kind of thing that
+# quietly corrupts a benchmark. Asking Alpaca for 2016 onwards returns a
+# single SPY bar dated 2018-11-01 with a volume of 200 shares — one small
+# IEX print — and then nothing until 2020-07-27. That lone bar is real in
+# the sense that a trade happened, and useless in every other sense: it
+# drags the benchmark's first_date back twenty months and opens a hole the
+# coverage check cannot see, because the benchmark is what defines the
+# calendar. Starting the window after it is the fix here. The general fix
+# is a liquidity floor at admission, which is ROADMAP phase 3.
 # =====================================================================
 
 run_id: alpaca
@@ -40,7 +49,7 @@ universe:
   benchmark: SPY
 
 window:
-  start: "2016-01-01"
+  start: "2020-08-01"
   end: null
 
 calendar:

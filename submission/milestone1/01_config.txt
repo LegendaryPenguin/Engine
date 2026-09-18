@@ -16,8 +16,8 @@ paths:
   reports   reports/baseline
   figures   reports/baseline/figures
   duckdb    data/marketengine.duckdb
-real 0.59
-user 0.39
-sys 0.09
+real 0.48
+user 0.32
+sys 0.07
 
 [exit code: 0]

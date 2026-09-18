@@ -109,7 +109,11 @@ class AlpacaProvider(PriceProvider):
         # resolves to SIP automatically, and hard-coding IEX would quietly
         # downgrade a user who is entitled to the full tape.
         env_feed = (feed or os.environ.get("ALPACA_DATA_FEED") or "").strip().lower()
+        self._DataFeed = DataFeed
         self._feed = DataFeed(env_feed) if env_feed else None
+        # Set once by _downgrade_to_iex so the warning prints one time and
+        # a genuine IEX failure cannot loop.
+        self._downgraded = False
 
         self._client = StockHistoricalDataClient(api_key=key, secret_key=secret)
 
@@ -117,7 +121,9 @@ class AlpacaProvider(PriceProvider):
         return {
             "provider": self.name,
             "vendor": "Alpaca Market Data v2",
-            "feed": self._feed.value if self._feed else "account default (iex on the free tier)",
+            "feed": (f"{self._feed.value} (downgraded from sip: account not entitled)"
+                     if self._downgraded else
+                     self._feed.value if self._feed else "sip (SDK default)"),
             "adjustment": "close/open/high/low/volume from adjustment=raw (as-traded); "
                           "adj_close from a second adjustment=all request (splits + dividends)",
             "caveat": "on the free IEX feed, volume reflects IEX only (~2-3% of consolidated) "
@@ -152,6 +158,34 @@ class AlpacaProvider(PriceProvider):
         out["adj_close"] = out["adj_close"].fillna(out["close"])
         return normalise(out, source="alpaca")
 
+    def _downgrade_to_iex(self, exc: Exception) -> bool:
+        """Retry on IEX when the account is not entitled to recent SIP data.
+
+        Leaving `feed` unset lets a paid account resolve to the full SIP
+        tape, which is the behaviour worth defaulting to. But the SDK's own
+        default is SIP, and a free account asking for a window that ends
+        today gets `subscription does not permit querying recent SIP data`
+        for every symbol — so "let the account decide" silently means "fail
+        on the free tier". Downgrading once, loudly, is better than either
+        hard-coding IEX for everyone or making a free key look like broken
+        credentials.
+
+        Returns True if the feed was changed and the caller should retry.
+        Only ever fires when no feed was requested explicitly: if the user
+        asked for SIP, a subscription error is a real answer, not something
+        to paper over.
+        """
+        if self._feed is not None or self._downgraded:
+            return False
+        if "subscription does not permit" not in str(exc).lower():
+            return False
+
+        self._feed = self._DataFeed("iex")
+        self._downgraded = True
+        print("  ! Alpaca account is not entitled to recent SIP data; "
+              "falling back to the IEX feed (volume is IEX-only, ~2-3% of consolidated)")
+        return True
+
     def _bars(self, symbols: list[str], start_ts: datetime, end_ts: datetime, adjustment):
         """One StockBars request, flattened to long rows (without adj_close)."""
         req = self._StockBarsRequest(
@@ -165,6 +199,8 @@ class AlpacaProvider(PriceProvider):
         try:
             bars = self._client.get_stock_bars(req)
         except Exception as exc:  # noqa: BLE001 - SDK raises several types
+            if self._downgrade_to_iex(exc):
+                return self._bars(symbols, start_ts, end_ts, adjustment)
             raise ProviderError(f"Alpaca request failed ({adjustment.value}): {exc}") from exc
 
         df = bars.df

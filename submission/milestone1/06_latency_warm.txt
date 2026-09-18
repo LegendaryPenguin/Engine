@@ -2,7 +2,7 @@ $ ./.venv/bin/python -m marketengine bench --trials 7 --json submission/mileston
 
   everything requested is already on disk (use --refresh to re-download)
 environment
-  timestamp_utc    2026-09-18T17:56:48+00:00
+  timestamp_utc    2026-09-18T18:27:49+00:00
   python           3.12.14
   platform         Darwin 25.6.0 (arm64)
   pandas           3.0.6
@@ -14,22 +14,22 @@ environment
 
 stage timings
   stage              seconds        rows      rows/sec
-  ingest               0.051           -             -
-  read_raw             0.013      32,395     2,583,076
-  clean                0.062      32,395       520,598
-  write_curated        0.011      32,395     2,902,193
-  analytics            0.026      32,384     1,225,583
-  TOTAL                0.163
+  ingest               0.070           -             -
+  read_raw             0.013      32,395     2,518,268
+  clean                0.066      32,395       488,323
+  write_curated        0.011      32,395     2,887,030
+  analytics            0.028      32,384     1,163,737
+  TOTAL                0.188
 
 provider fetch latency (one symbol, last 7 calendar days)
   trials           7.0
   symbol_count     1.0
   rows_per_request 6.0
-  cold_ms          357.2
-  p50_ms           126.4
-  p95_ms           179.2
-  max_ms           179.2
-  mean_ms          136.7
+  cold_ms          334.2
+  p50_ms           108.2
+  p95_ms           322.7
+  max_ms           322.7
+  mean_ms          141.0
 
 data freshness
   expected last session   2026-09-17
@@ -57,8 +57,8 @@ note: ingest fetched 0 rows — everything was already on disk, so this is the w
 note: 11 symbols, 16 quality events, 32,395 curated rows
 
 json -> submission/milestone1/06_latency_warm.json
-real 2.11
-user 0.83
-sys 0.17
+real 2.21
+user 0.73
+sys 0.15
 
 [exit code: 0]

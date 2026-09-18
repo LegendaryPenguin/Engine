@@ -69,13 +69,15 @@ API calls and no waiting.
 ### Tests
 
 ```bash
-./.venv/bin/pytest -q      # 121 passed, 2 skipped, ~1.3 seconds, no network
+./.venv/bin/pytest -q      # 123 passed, ~1.4 seconds
 ```
 
-No test hits the network. The provider adapters are tested against stub
-responses; the analytics are tested against hand-computed closed forms
-rather than against their own output. The 2 skips are live-API tests that
-run only when Alpaca credentials are present in `.env`.
+Two tests hit the network and the rest do not. The provider adapters are
+tested against stub responses; the analytics are tested against hand-computed
+closed forms rather than against their own output. The exceptions are two
+live-Alpaca tests that check the real API still returns what the adapter
+expects — they skip automatically when `.env` has no credentials, so a clean
+clone reports 121 passed, 2 skipped.
 
 ---
 
@@ -186,19 +188,19 @@ do with each other. Real output, from
 ```
 stage timings
   stage              seconds        rows      rows/sec
-  ingest               0.051           -             -
-  read_raw             0.013      32,395     2,583,076
-  clean                0.062      32,395       520,598
-  write_curated        0.011      32,395     2,902,193
-  analytics            0.026      32,384     1,225,583
-  TOTAL                0.163
+  ingest               0.070           -             -
+  read_raw             0.013      32,395     2,518,268
+  clean                0.066      32,395       488,323
+  write_curated        0.011      32,395     2,887,030
+  analytics            0.028      32,384     1,163,737
+  TOTAL                0.188
 ```
 
 **Throughput** is not the interesting number. 32,395 rows through clean +
-analytics in 0.16 seconds means iteration is free; it does not make the
-output any more correct. (`ingest` is 0.051s there because everything was
+analytics in 0.19 seconds means iteration is free; it does not make the
+output any more correct. (`ingest` is 0.070s there because everything was
 already on disk. `bench --refresh` re-downloads the whole window and reports
-0.731s for 32,395 rows, about 44,000 rows a second.)
+0.804s for 32,395 rows, about 40,000 rows a second.)
 
 **Freshness** is the interesting number, and `bench` reports it in
 *sessions behind the benchmark* rather than in seconds. A pipeline that

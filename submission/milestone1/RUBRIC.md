@@ -10,7 +10,7 @@ Paths are relative to the repository root.
 |---|---|
 | Daily price/volume from an approved API | `submission/milestone1/04_run_cold.txt` — 32,395 bars, 11 symbols, yfinance |
 | Configurable universe | `01_config.txt` (resolved config) ← `config/default.yml`; `marketengine/config.py` |
-| Second provider, same pipeline | `config/alpaca.yml`, `marketengine/providers/alpaca_provider.py`, `tests/test_alpaca.py` |
+| Second provider, same pipeline | `config/alpaca.yml`, `marketengine/providers/alpaca_provider.py`, `tests/test_alpaca.py` — 13 tests incl. 2 against the live API |
 | Reproducible: config hash + versions + coverage | `10_run_manifest.json` |
 | Incremental, idempotent | `03_ingest_dry_run.txt`, `04_run_cold.txt` (32,395 rows) vs `05_run_warm.txt` (0 rows) |
 | Restatement handling | `marketengine/ingest.py` (5-day overlap) + `marketengine/store.py` (`keep="last"`) |
@@ -53,7 +53,7 @@ Paths are relative to the repository root.
 | Every stage independently runnable | `01_config.txt`; `ingest`/`clean`/`analyze`/`report`/`bench`/`query`/`config` subcommands |
 | Eager config validation | `marketengine/config.py`; `tests/test_config.py` |
 | Errors are legible, not tracebacks | `marketengine/cli.py` error handling |
-| Tests | `02_tests.txt` — 121 passed, 2 skipped, 1.29s |
+| Tests | `02_tests.txt` — 123 passed, 0 skipped, 1.44s |
 | Secrets not in config | `.gitignore`, `.env.example`, `marketengine/providers/alpaca_provider.py` |
 | Speed | `06_latency_warm.txt` / `06_latency_cold.txt` — stage timings, rows/sec, fetch-latency percentiles |
 

@@ -1,6 +1,6 @@
 {
   "environment": {
-    "timestamp_utc": "2026-09-18T17:56:48+00:00",
+    "timestamp_utc": "2026-09-18T18:27:49+00:00",
     "python": "3.12.14",
     "platform": "Darwin 25.6.0 (arm64)",
     "pandas": "3.0.6",
@@ -13,45 +13,45 @@
   "stages": [
     {
       "stage": "ingest",
-      "seconds": 0.0507,
+      "seconds": 0.0701,
       "rows": 0,
       "rows_per_second": null
     },
     {
       "stage": "read_raw",
-      "seconds": 0.0125,
+      "seconds": 0.0129,
       "rows": 32395,
-      "rows_per_second": 2583075.8
+      "rows_per_second": 2518268.0
     },
     {
       "stage": "clean",
-      "seconds": 0.0622,
+      "seconds": 0.0663,
       "rows": 32395,
-      "rows_per_second": 520597.8
+      "rows_per_second": 488323.3
     },
     {
       "stage": "write_curated",
       "seconds": 0.0112,
       "rows": 32395,
-      "rows_per_second": 2902192.7
+      "rows_per_second": 2887029.8
     },
     {
       "stage": "analytics",
-      "seconds": 0.0264,
+      "seconds": 0.0278,
       "rows": 32384,
-      "rows_per_second": 1225583.4
+      "rows_per_second": 1163737.4
     }
   ],
-  "total_seconds": 0.163,
+  "total_seconds": 0.1883,
   "fetch_latency_ms": {
     "trials": 7.0,
     "symbol_count": 1.0,
     "rows_per_request": 6.0,
-    "cold_ms": 357.2,
-    "p50_ms": 126.4,
-    "p95_ms": 179.2,
-    "max_ms": 179.2,
-    "mean_ms": 136.7
+    "cold_ms": 334.2,
+    "p50_ms": 108.2,
+    "p95_ms": 322.7,
+    "max_ms": 322.7,
+    "mean_ms": 141.0
   },
   "freshness": {
     "provisional_last_session": true,

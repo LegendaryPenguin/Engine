@@ -22,23 +22,30 @@ provider, 11 symbols (10 tickers + SPY benchmark), 2015-01-02 → 2026-09-18,
 
 | | |
 |---|---|
-| Tests | **121 passed, 2 skipped**, 1.29s, zero network calls |
-| Cold run (`run --refresh`, full 11-year re-download) | **2.24s** wall clock |
-| Warm run (`run`, nothing to download) | **1.59s** wall clock |
-| Ingest, cold | 0.731s for 32,395 bars = **44,313 rows/sec** |
-| Compute (read + clean + write + analytics) | **0.11s** = ~300,000 rows/sec end to end |
-| Provider fetch latency, 1 symbol | cold 234ms, **p50 125ms, p95 190ms** |
+| Tests | **123 passed, 0 skipped**, 1.44s. All but the 2 live-Alpaca tests run with zero network calls |
+| Cold run (`run --refresh`, full 11-year re-download) | **2.33s** wall clock |
+| Warm run (`run`, nothing to download) | **1.56s** wall clock |
+| Ingest, cold | 0.804s for 32,395 bars = **40,279 rows/sec** |
+| Compute (read + clean + write + analytics) | **0.12s** = ~275,000 rows/sec end to end |
+| Provider fetch latency, 1 symbol | **p50 108ms**, p95 323ms (see the note below on p95) |
 | Rows quarantined | **0** |
 | Rows flagged and kept | **16** of 32,395 (0.05%), every one a real market event |
 | Coverage | **100%** of benchmark sessions, all 11 symbols |
 | Data freshness | all 11 symbols current with SPY's last session |
 
-The compute cost is not the interesting number — 0.11 seconds means
+The compute cost is not the interesting number — 0.12 seconds means
 iterating on a metric is free, and that is all it means. The number that
 matters for correctness is **freshness**, and `06_latency_*.txt` reports it
 in sessions behind the benchmark rather than in seconds, plus a warning that
 the newest bar belongs to a session that has not closed yet. See
 `ROADMAP.md` phase 4 for why that distinction is the one worth measuring.
+
+One number moved between captures and is worth not smoothing over: fetch p95
+was 190ms on an earlier run and 323ms on this one, on an unchanged code path.
+That is the public Yahoo endpoint and my home connection, not the pipeline.
+It is exactly why `bench` reports percentiles and a separate `cold_ms`
+instead of one average — a single mean would have hidden both the variance
+and the fact that it is external.
 
 ---
 
@@ -48,7 +55,7 @@ the newest bar belongs to a session that has not closed yet. See
 |---|---|---|
 | `00_environment.txt` | `uname`, `python --version`, `pip freeze` | exact platform and every pinned dependency version |
 | `01_config.txt` | `python -m marketengine config` | the resolved configuration, its SHA-256, and every output path — nothing hard-coded |
-| `02_tests.txt` | `pytest -q` | 121 passed / 2 skipped in 1.29s. No test touches the network; the 2 skips are live-Alpaca tests that need credentials |
+| `02_tests.txt` | `pytest -q` | 123 passed, 0 skipped, in 1.44s. Only the 2 live-Alpaca tests touch the network; everything else runs against stubs |
 | `03_ingest_dry_run.txt` | `ingest --dry-run` | the per-symbol download plan without downloading, i.e. the incremental logic made inspectable |
 | `04_run_cold.txt` | `run --refresh` | full pipeline from a re-downloaded window: 32,395 rows fetched, timed |
 | `05_run_warm.txt` | `run` | the same command immediately after: **0 new rows fetched**. Idempotent ingest, demonstrated rather than claimed |
@@ -178,9 +185,9 @@ lookup table, for grading against the rubric directly.
 - Provider errors and config errors print as one-line messages without a
   traceback: those mean the input or the vendor is wrong, and a traceback
   would imply the program is broken.
-- **121 tests, 2 skipped, 1.29 seconds, zero network calls.** Providers are
-  tested against stub responses; the 2 skips are live-API tests that run
-  only when Alpaca credentials are present.
+- **123 tests, 0 skipped, 1.44 seconds.** Providers are tested against stub
+  responses, so the suite runs offline apart from the 2 live-Alpaca tests
+  that verify the real API still returns what the adapter expects.
 - Secrets never touch a config file: Alpaca credentials come from the
   environment or `.env` (gitignored), so every config is safe to commit.
 

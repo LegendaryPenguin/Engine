@@ -224,8 +224,12 @@ def test_live_fetch_returns_a_schema_conformant_panel():
     assert out["close"].gt(0).all()
     assert out["adj_close"].gt(0).all()
     assert not out.duplicated(subset=["symbol", "date"]).any()
-    # January 2024 had 20 trading sessions.
-    assert out.groupby("symbol").size().eq(20).all()
+    # 2024-01-02 through 2024-01-31 inclusive is 21 sessions: 22 weekdays
+    # less MLK Day on the 15th. Asserting the exact count is the point —
+    # an off-by-one in the provider's end-date handling is invisible in a
+    # "returned some rows" check, and Alpaca's `end` is inclusive where
+    # yfinance's is exclusive.
+    assert out.groupby("symbol").size().eq(21).all()
 
 
 @live

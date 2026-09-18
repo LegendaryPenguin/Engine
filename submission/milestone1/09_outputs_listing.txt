@@ -3,52 +3,52 @@ $ ls -lh the generated outputs
 --- data/raw/yfinance ---
 total 4264
 -rw-r--r--@ 1 nrawal  staff   258B Sep 18 13:26 _requests.json
--rw-r--r--@ 1 nrawal  staff   153K Sep 18 13:56 AAPL.parquet
--rw-r--r--@ 1 nrawal  staff   143K Sep 18 13:56 GLD.parquet
--rw-r--r--@ 1 nrawal  staff   149K Sep 18 13:56 IWM.parquet
--rw-r--r--@ 1 nrawal  staff   143K Sep 18 13:56 JNJ.parquet
--rw-r--r--@ 1 nrawal  staff   148K Sep 18 13:56 JPM.parquet
--rw-r--r--@ 1 nrawal  staff   152K Sep 18 13:56 MSFT.parquet
--rw-r--r--@ 1 nrawal  staff   155K Sep 18 13:56 NVDA.parquet
--rw-r--r--@ 1 nrawal  staff   153K Sep 18 13:56 QQQ.parquet
--rw-r--r--@ 1 nrawal  staff   153K Sep 18 13:56 SPY.parquet
--rw-r--r--@ 1 nrawal  staff   141K Sep 18 13:56 TLT.parquet
--rw-r--r--@ 1 nrawal  staff   142K Sep 18 13:56 XOM.parquet
+-rw-r--r--@ 1 nrawal  staff   153K Sep 18 14:27 AAPL.parquet
+-rw-r--r--@ 1 nrawal  staff   143K Sep 18 14:27 GLD.parquet
+-rw-r--r--@ 1 nrawal  staff   149K Sep 18 14:27 IWM.parquet
+-rw-r--r--@ 1 nrawal  staff   143K Sep 18 14:27 JNJ.parquet
+-rw-r--r--@ 1 nrawal  staff   148K Sep 18 14:27 JPM.parquet
+-rw-r--r--@ 1 nrawal  staff   152K Sep 18 14:27 MSFT.parquet
+-rw-r--r--@ 1 nrawal  staff   155K Sep 18 14:27 NVDA.parquet
+-rw-r--r--@ 1 nrawal  staff   153K Sep 18 14:27 QQQ.parquet
+-rw-r--r--@ 1 nrawal  staff   153K Sep 18 14:27 SPY.parquet
+-rw-r--r--@ 1 nrawal  staff   141K Sep 18 14:27 TLT.parquet
+-rw-r--r--@ 1 nrawal  staff   142K Sep 18 14:27 XOM.parquet
 
 --- data/curated/baseline ---
 total 4432
--rw-r--r--@ 1 nrawal  staff   1.2M Sep 18 13:56 prices.parquet
+-rw-r--r--@ 1 nrawal  staff   1.2M Sep 18 14:27 prices.parquet
 
 --- data/outputs/baseline ---
 total 7400
--rw-r--r--@ 1 nrawal  staff   1.5K Sep 18 13:56 correlation_matrix.csv
--rw-r--r--@ 1 nrawal  staff   437K Sep 18 13:56 cumulative_returns.csv
--rw-r--r--@ 1 nrawal  staff   507K Sep 18 13:56 daily_returns.csv
--rw-r--r--@ 1 nrawal  staff   1.4K Sep 18 13:56 data_quality.csv
--rw-r--r--@ 1 nrawal  staff   794B Sep 18 13:56 ingest_report.csv
--rw-r--r--@ 1 nrawal  staff   3.7K Sep 18 13:56 metrics_summary.csv
--rw-r--r--@ 1 nrawal  staff   408K Sep 18 13:56 prices_adj_close.csv
--rw-r--r--@ 1 nrawal  staff   837B Sep 18 13:56 quality_events.csv
--rw-r--r--@ 1 nrawal  staff   409K Sep 18 13:56 relative_cumulative_vs_SPY.csv
--rw-r--r--@ 1 nrawal  staff   401K Sep 18 13:56 rolling_corr_63d_vs_SPY.csv
--rw-r--r--@ 1 nrawal  staff   440K Sep 18 13:56 rolling_volatility_21d.csv
--rw-r--r--@ 1 nrawal  staff   408K Sep 18 13:56 rolling_volatility_252d.csv
--rw-r--r--@ 1 nrawal  staff   433K Sep 18 13:56 rolling_volatility_63d.csv
+-rw-r--r--@ 1 nrawal  staff   1.5K Sep 18 14:27 correlation_matrix.csv
+-rw-r--r--@ 1 nrawal  staff   437K Sep 18 14:27 cumulative_returns.csv
+-rw-r--r--@ 1 nrawal  staff   507K Sep 18 14:27 daily_returns.csv
+-rw-r--r--@ 1 nrawal  staff   1.4K Sep 18 14:27 data_quality.csv
+-rw-r--r--@ 1 nrawal  staff   794B Sep 18 14:27 ingest_report.csv
+-rw-r--r--@ 1 nrawal  staff   3.7K Sep 18 14:27 metrics_summary.csv
+-rw-r--r--@ 1 nrawal  staff   408K Sep 18 14:27 prices_adj_close.csv
+-rw-r--r--@ 1 nrawal  staff   837B Sep 18 14:27 quality_events.csv
+-rw-r--r--@ 1 nrawal  staff   409K Sep 18 14:27 relative_cumulative_vs_SPY.csv
+-rw-r--r--@ 1 nrawal  staff   401K Sep 18 14:27 rolling_corr_63d_vs_SPY.csv
+-rw-r--r--@ 1 nrawal  staff   440K Sep 18 14:27 rolling_volatility_21d.csv
+-rw-r--r--@ 1 nrawal  staff   408K Sep 18 14:27 rolling_volatility_252d.csv
+-rw-r--r--@ 1 nrawal  staff   433K Sep 18 14:27 rolling_volatility_63d.csv
 
 --- reports/baseline ---
 total 56
 drwxr-xr-x@ 7 nrawal  staff   224B Sep 18 13:24 figures
--rw-r--r--@ 1 nrawal  staff    14K Sep 18 13:56 run_manifest.json
--rw-r--r--@ 1 nrawal  staff    11K Sep 18 13:56 summary.md
+-rw-r--r--@ 1 nrawal  staff    14K Sep 18 14:27 run_manifest.json
+-rw-r--r--@ 1 nrawal  staff    11K Sep 18 14:27 summary.md
 
 --- reports/baseline/figures ---
 total 2064
--rw-r--r--@ 1 nrawal  staff   115K Sep 18 13:56 correlation_heatmap.png
--rw-r--r--@ 1 nrawal  staff   252K Sep 18 13:56 growth_of_one.png
--rw-r--r--@ 1 nrawal  staff    91K Sep 18 13:56 relative_to_benchmark.png
--rw-r--r--@ 1 nrawal  staff    55K Sep 18 13:56 risk_return.png
--rw-r--r--@ 1 nrawal  staff   399K Sep 18 13:56 rolling_volatility.png
+-rw-r--r--@ 1 nrawal  staff   115K Sep 18 14:27 correlation_heatmap.png
+-rw-r--r--@ 1 nrawal  staff   252K Sep 18 14:27 growth_of_one.png
+-rw-r--r--@ 1 nrawal  staff    91K Sep 18 14:27 relative_to_benchmark.png
+-rw-r--r--@ 1 nrawal  staff    55K Sep 18 14:27 risk_return.png
+-rw-r--r--@ 1 nrawal  staff   399K Sep 18 14:27 rolling_volatility.png
 
 --- total on-disk size ---
-8.1M	data
-1.0M	reports
+ 11M	data
+2.2M	reports

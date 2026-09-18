@@ -13,8 +13,8 @@ $ ./.venv/bin/python -m marketengine ingest --dry-run
   GLD    up to date
   SPY    up to date
       11/11 symbol(s) available on disk, 0 new row(s) fetched
-real 0.66
-user 0.44
-sys 0.09
+real 0.65
+user 0.34
+sys 0.08
 
 [exit code: 0]
