@@ -1,0 +1,63 @@
+$ ./.venv/bin/python -m marketengine bench --refresh --trials 7 --json submission/milestone1/06_latency_cold.json
+
+  provider: yfinance | 11 symbol(s) to fetch, 0 already current
+environment
+  timestamp_utc    2026-09-18T17:56:50+00:00
+  python           3.12.14
+  platform         Darwin 25.6.0 (arm64)
+  pandas           3.0.6
+  numpy            2.5.3
+  provider         yfinance
+  config_sha256    cb859924eecfb678
+  symbols          11
+  duckdb           1.5.5
+
+stage timings
+  stage              seconds        rows      rows/sec
+  ingest               0.731      32,395        44,313
+  read_raw             0.025      32,395     1,300,630
+  clean                0.051      32,395       638,238
+  write_curated        0.010      32,395     3,181,100
+  analytics            0.026      32,384     1,222,168
+  TOTAL                0.843
+
+provider fetch latency (one symbol, last 7 calendar days)
+  trials           7.0
+  symbol_count     1.0
+  rows_per_request 6.0
+  cold_ms          234.5
+  p50_ms           124.6
+  p95_ms           189.9
+  max_ms           189.9
+  mean_ms          128.8
+
+data freshness
+  expected last session   2026-09-17
+  benchmark last session  2026-09-18
+  WARNING: the newest bar is for a session that has not closed yet.
+           Its close is the last trade so far and its volume is partial.
+           Pin window.end, or drop the last bar, before trading on it.
+
+  symbol      last_bar  age_days   sessions_behind  current
+  AAPL      2026-09-18         0                 0      yes
+  MSFT      2026-09-18         0                 0      yes
+  NVDA      2026-09-18         0                 0      yes
+  JPM       2026-09-18         0                 0      yes
+  XOM       2026-09-18         0                 0      yes
+  JNJ       2026-09-18         0                 0      yes
+  QQQ       2026-09-18         0                 0      yes
+  IWM       2026-09-18         0                 0      yes
+  TLT       2026-09-18         0                 0      yes
+  GLD       2026-09-18         0                 0      yes
+  SPY       2026-09-18         0                 0      yes
+
+  every symbol is current with the benchmark's last session
+
+note: 11 symbols, 16 quality events, 32,395 curated rows
+
+json -> submission/milestone1/06_latency_cold.json
+real 2.52
+user 1.04
+sys 0.22
+
+[exit code: 0]

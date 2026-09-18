@@ -40,23 +40,27 @@ def stage_ingest(cfg: Config, *, refresh: bool = False,
     return report
 
 
-def stage_clean(cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Align and gap-fill. Returns `(panel, quality_report)`."""
+def stage_clean(cfg: Config) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Quarantine, align, flag. Returns `(panel, quality_report, event_log)`."""
     print("[2/4] clean")
     raw = store.read_raw(cfg.raw_dir, list(cfg.universe.all_symbols))
     if raw.empty:
         raise SystemExit(
             f"no raw data under {cfg.raw_dir}. Run `python -m marketengine ingest` first."
         )
-    panel, quality = clean_mod.clean(cfg, raw)
+    panel, quality, events = clean_mod.clean(cfg, raw)
     store.write_curated(cfg.curated_dir, panel)
     store.register_duckdb(cfg.duckdb_path, cfg.curated_dir, cfg.raw_dir, cfg.run_id)
     print(f"      {len(panel):,} rows x {panel['symbol'].nunique()} symbols, "
           f"{panel['date'].min().date()} -> {panel['date'].max().date()} "
           f"({int(panel['filled'].sum()):,} forward-filled)")
+    dropped = int(quality["rows_dropped_missing"].sum())
+    quarantined = int(quality["rows_quarantined"].sum())
+    print(f"      {len(events):,} quality event(s): "
+          f"{quarantined:,} row(s) quarantined, {dropped:,} missing session(s) dropped")
     print(f"      curated -> {cfg.curated_dir / 'prices.parquet'}")
     print(f"      duckdb  -> {cfg.duckdb_path} (view: prices_{cfg.run_id})")
-    return panel, quality
+    return panel, quality, events
 
 
 def stage_analyze(cfg: Config, panel: pd.DataFrame) -> dict[str, object]:
@@ -131,11 +135,15 @@ def stage_analyze(cfg: Config, panel: pd.DataFrame) -> dict[str, object]:
 
 
 def stage_report(cfg: Config, *, panel: pd.DataFrame, quality: pd.DataFrame,
-                 ingest_report: pd.DataFrame, analysis: dict[str, object]) -> dict[str, Path]:
+                 events: pd.DataFrame, ingest_report: pd.DataFrame,
+                 analysis: dict[str, object]) -> dict[str, Path]:
     """Write `summary.md` and `run_manifest.json`."""
     print("[4/4] report")
     tables = list(analysis["tables"])  # type: ignore[arg-type]
     tables.append(store.write_table(cfg.output_dir, "data_quality", quality, index=False))
+    # The event log is written even when empty: an empty file is evidence the
+    # checks ran, a missing file is ambiguous.
+    tables.append(store.write_table(cfg.output_dir, "quality_events", events, index=False))
     tables.append(store.write_table(cfg.output_dir, "ingest_report", ingest_report, index=False))
 
     # The provider is described without being constructed where possible:
@@ -151,6 +159,7 @@ def stage_report(cfg: Config, *, panel: pd.DataFrame, quality: pd.DataFrame,
     summary_path = report_mod.write_summary(
         cfg, summary=analysis["summary"], quality=quality, corr=analysis["corr"],  # type: ignore[arg-type]
         ingest_report=ingest_report, panel=panel, figures=figures,  # type: ignore[arg-type]
+        events=events,
     )
     manifest_path = report_mod.write_manifest(
         cfg, provider_info=provider_info, panel=panel, ingest_report=ingest_report,
@@ -164,7 +173,7 @@ def stage_report(cfg: Config, *, panel: pd.DataFrame, quality: pd.DataFrame,
 def run(cfg: Config, *, refresh: bool = False) -> dict[str, Path]:
     """The whole pipeline, in order."""
     ingest_report = stage_ingest(cfg, refresh=refresh)
-    panel, quality = stage_clean(cfg)
+    panel, quality, events = stage_clean(cfg)
     analysis = stage_analyze(cfg, panel)
-    return stage_report(cfg, panel=panel, quality=quality,
+    return stage_report(cfg, panel=panel, quality=quality, events=events,
                         ingest_report=ingest_report, analysis=analysis)

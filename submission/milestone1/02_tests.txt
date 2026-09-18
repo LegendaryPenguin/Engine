@@ -1,0 +1,23 @@
+$ ./.venv/bin/pytest -q
+
+...........ss........................................................... [ 58%]
+...................................................                      [100%]
+=============================== warnings summary ===============================
+tests/test_alpaca.py::test_missing_credentials_are_a_clear_provider_error
+  /Users/nrawal/MarketEngine/.venv/lib/python3.12/site-packages/websockets/legacy/__init__.py:6: DeprecationWarning: websockets.legacy is deprecated; see https://websockets.readthedocs.io/en/stable/howto/upgrade.html for upgrade instructions
+    warnings.warn(  # deprecated in 14.0 - 2024-11-09
+
+tests/test_bench.py::test_measure_pipeline_without_network_times_every_compute_stage
+tests/test_bench.py::test_measure_pipeline_without_network_times_every_compute_stage
+tests/test_bench.py::test_render_and_to_json_survive_a_measurement
+tests/test_bench.py::test_render_and_to_json_survive_a_measurement
+  /Users/nrawal/MarketEngine/.venv/lib/python3.12/site-packages/numpy/lib/_function_base_impl.py:3036: RuntimeWarning: invalid value encountered in divide
+    c /= stddev[:, None]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+121 passed, 2 skipped, 5 warnings in 1.29s
+real 1.50
+user 1.06
+sys 0.21
+
+[exit code: 0]

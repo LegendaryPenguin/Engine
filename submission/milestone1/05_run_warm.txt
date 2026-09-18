@@ -1,0 +1,24 @@
+$ ./.venv/bin/python -m marketengine run
+
+[1/4] ingest
+  everything requested is already on disk (use --refresh to re-download)
+      11/11 symbol(s) available on disk, 0 new row(s) fetched
+[2/4] clean
+      32,395 rows x 11 symbols, 2015-01-02 -> 2026-09-18 (0 forward-filled)
+      16 quality event(s): 0 row(s) quarantined, 0 missing session(s) dropped
+      curated -> data/curated/baseline/prices.parquet
+      duckdb  -> data/marketengine.duckdb (view: prices_baseline)
+[3/4] analyze
+      2,944 return rows x 11 symbols; 10 table(s), 5 figure(s)
+      tables  -> data/outputs/baseline
+      figures -> reports/baseline/figures
+[4/4] report
+      summary  -> reports/baseline/summary.md
+      manifest -> reports/baseline/run_manifest.json
+
+done.
+real 1.59
+user 1.21
+sys 0.17
+
+[exit code: 0]

@@ -1,0 +1,20 @@
+$ ./.venv/bin/python -m marketengine ingest --dry-run
+
+[1/4] ingest
+  AAPL   up to date
+  MSFT   up to date
+  NVDA   up to date
+  JPM    up to date
+  XOM    up to date
+  JNJ    up to date
+  QQQ    up to date
+  IWM    up to date
+  TLT    up to date
+  GLD    up to date
+  SPY    up to date
+      11/11 symbol(s) available on disk, 0 new row(s) fetched
+real 0.66
+user 0.44
+sys 0.09
+
+[exit code: 0]

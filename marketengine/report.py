@@ -143,7 +143,8 @@ def _table(df: pd.DataFrame) -> str:
 
 def write_summary(cfg: Config, *, summary: pd.DataFrame, quality: pd.DataFrame,
                   corr: pd.DataFrame, ingest_report: pd.DataFrame,
-                  panel: pd.DataFrame, figures: dict[str, Path]) -> Path:
+                  panel: pd.DataFrame, figures: dict[str, Path],
+                  events: pd.DataFrame) -> Path:
     """Write `reports/<run_id>/summary.md` and return its path."""
     bench = cfg.universe.benchmark
     start = panel["date"].min().date()
@@ -159,8 +160,8 @@ def write_summary(cfg: Config, *, summary: pd.DataFrame, quality: pd.DataFrame,
 
     failures = ingest_report.loc[ingest_report["error"] != ""]
     flagged = quality.loc[
-        (quality["gaps_forward_filled"] > 0)
-        | (quality["rows_dropped_long_gap"] > 0)
+        (quality["rows_quarantined"] > 0)
+        | (quality["gaps_found"] > 0)
         | (quality["short_history"])
         | (quality["adj_close_equals_close"])
     ]
@@ -178,9 +179,11 @@ def write_summary(cfg: Config, *, summary: pd.DataFrame, quality: pd.DataFrame,
     w(f"- **Benchmark:** `{bench}`")
     w(f"- **Effective window:** {start} → {end} "
       f"({panel['date'].nunique():,} sessions, {len(panel):,} panel rows)")
-    w(f"- **Calendar:** aligned to `{cfg.calendar.align}`, "
-      f"gaps forward-filled up to {cfg.calendar.max_ffill_days} session(s) "
-      f"({n_filled:,} filled bars in total)")
+    fill_policy = (f"gaps forward-filled up to {cfg.calendar.max_ffill_days} session(s) "
+                   f"({n_filled:,} filled bars in total)"
+                   if cfg.calendar.max_ffill_days > 0 else
+                   "prices never forward-filled; sessions with no bar are dropped")
+    w(f"- **Calendar:** aligned to `{cfg.calendar.align}`, {fill_policy}")
     w(f"- **Risk-free:** {cfg.analytics.risk_free_annual * 100:.2f}% annual "
       f"({cfg.analytics.risk_free_daily:.6%} daily) for Sharpe and CAPM alpha")
     w("")
@@ -226,19 +229,34 @@ def write_summary(cfg: Config, *, summary: pd.DataFrame, quality: pd.DataFrame,
         w("")
         w(_table(failures.loc[:, ["symbol", "error"]]))
     w("")
+    w("Every check flags rather than deletes. The only rows that leave the "
+      "analytical table are structural impossibilities — a non-positive price, or "
+      "a bar whose high is below its own low, open or close — which cannot be "
+      "interpreted at all, and sessions with no vendor bar. Both keep their "
+      "values in the event log.")
+    w("")
+    flag_cols = [c for c in quality.columns if c.startswith("flag_")]
+    totals = {c.removeprefix("flag_").upper(): int(quality[c].sum()) for c in flag_cols}
+    w(_table(pd.DataFrame(
+        [{"flag": k, "rows": v} for k, v in totals.items()]
+    )))
+    w("")
     if flagged.empty:
-        w("No symbol needed a forward fill, lost rows to a long gap, has less "
-          f"history than {cfg.analytics.min_history_days} sessions, or arrived "
-          "without an adjusted close.")
+        w("No symbol lost a row, missed a session, has less history than "
+          f"{cfg.analytics.min_history_days} sessions, or arrived without an "
+          "adjusted close.")
     else:
         w("Symbols with something worth knowing about (all of it recorded, none "
           "of it silently corrected):")
         w("")
-        w(_table(flagged.loc[:, ["symbol", "rows", "coverage_pct",
-                                 "gaps_forward_filled", "rows_dropped_long_gap",
-                                 "short_history", "adj_close_equals_close"]]))
+        w(_table(flagged.loc[:, ["symbol", "rows", "coverage_pct", "rows_quarantined",
+                                 "gaps_found", "gaps_forward_filled",
+                                 "rows_dropped_missing", "short_history",
+                                 "adj_close_equals_close"]]))
     w("")
-    w("Full per-symbol detail: `" + str(cfg.output_dir / "data_quality.csv") + "`.")
+    w(f"{len(events):,} quality event(s) logged. Per-symbol counts: "
+      "`" + str(cfg.output_dir / "data_quality.csv") + "`; per-row detail with the "
+      "triggering values: `" + str(cfg.output_dir / "quality_events.csv") + "`.")
     w("")
 
     w("## 5. Figures")
@@ -260,20 +278,37 @@ def write_summary(cfg: Config, *, summary: pd.DataFrame, quality: pd.DataFrame,
     w("2. **The benchmark defines the trading calendar** (`calendar.align: "
       f"{cfg.calendar.align}`). A date {bench} did not trade has no benchmark "
       "return, so no relative statistic exists for it.")
-    w(f"3. **Gaps are carried forward for at most {cfg.calendar.max_ffill_days} "
-      "session(s)** and every carried bar is flagged in the `filled` column. Longer "
-      "gaps are dropped rather than filled, so each series starts at its own first "
-      "real session instead of at a fabricated flat stretch.")
+    if cfg.calendar.max_ffill_days == 0:
+        w("3. **Prices are not forward-filled.** A carried price is a fabricated 0% "
+          "return followed by a fabricated real one, which at a one-day-to-one-month "
+          "holding period is large enough to look like a signal, and filling past a "
+          "security's last quote manufactures a zero-volatility series that every "
+          "risk statistic then rewards. Sessions with no vendor bar are flagged "
+          "`MISSING_SESSION` and dropped, so a return spanning the hole is honestly a "
+          "two-day return rather than a made-up pair of one-day returns.")
+    else:
+        w(f"3. **Gaps are carried forward for at most {cfg.calendar.max_ffill_days} "
+          "session(s)** and every carried bar is flagged `FORWARD_FILLED` and marked "
+          "in the `filled` column. Longer gaps are dropped rather than filled. Note "
+          "that the default is 0 — this run has opted into filling.")
     w("4. **Volume is never forward-filled.** A carried bar has unknown volume, and "
       "NaN is what unknown means; a carried volume would invent trading activity.")
     w("5. **Nothing is dropped for being surprising.** Extreme moves, zero-volume "
-      "sessions and stale price runs are counted in the quality table and kept in "
-      "the data.")
-    w("6. **The risk-free rate is a flat "
+      "sessions and stale price runs are flagged by name in the panel's `flags` "
+      "column and kept in the data. A 45% single-day move is usually real, and "
+      "deleting it is the actual error.")
+    w(f"6. **An extreme return is |r| > {cfg.analytics.extreme_return_threshold:.0%} "
+      f"OR |r| > {cfg.analytics.extreme_return_vol_units:g} trailing standard "
+      f"deviations** over {cfg.analytics.quality_vol_window} sessions ending *before* "
+      "the bar being tested, so an outlier cannot inflate its own yardstick. One test "
+      "alone is not enough: the absolute threshold catches decimal-point errors on "
+      "quiet bond ETFs, the relative one catches bad prints on names that routinely "
+      "move 15%.")
+    w("7. **The risk-free rate is a flat "
       f"{cfg.analytics.risk_free_annual * 100:.2f}% assumption**, de-annualised "
       "geometrically. Swap in a real T-bill series before quoting a Sharpe ratio "
       "anywhere it matters.")
-    w(f"7. **Pairwise windows.** A symbol with less history than {bench} is compared "
+    w(f"8. **Pairwise windows.** A symbol with less history than {bench} is compared "
       "against it only over the sessions they share; `overlap_with_benchmark` in "
       "`metrics_summary.csv` reports how many that was.")
     w("")

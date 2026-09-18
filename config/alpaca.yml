@@ -45,7 +45,7 @@ window:
 
 calendar:
   align: benchmark
-  max_ffill_days: 3
+  max_ffill_days: 0
 
 analytics:
   rolling_vol_windows: [21, 63, 252]
@@ -53,7 +53,10 @@ analytics:
   risk_free_annual: 0.02
   trading_days_per_year: 252
   min_history_days: 250
-  extreme_return_threshold: 0.35
+  extreme_return_threshold: 0.50
+  extreme_return_vol_units: 8.0
+  quality_vol_window: 20
+  stale_price_sessions: 3
 
 storage:
   root: data

@@ -50,10 +50,15 @@ calendar:
   #              away history for a late-listed name)
   # union      — keep every date any ticker traded (loosest; leaves holes)
   align: benchmark
-  # A real halt or a missing vendor bar gets carried forward this many
-  # days before we give up and leave a NaN. Deliberately small: a long
-  # forward fill invents a flat price, which reads as zero volatility.
-  max_ffill_days: 3
+  # 0 = never forward-fill prices. A carried price is a fabricated 0%
+  # return on the fill day and a fabricated real return on the next one,
+  # and at a one-day-to-one-month holding period that artefact is big
+  # enough to look like a signal. Sessions with no bar are flagged
+  # MISSING_SESSION and dropped, so a return spanning the hole is honestly
+  # a two-day return. Raise it (2-3) only if you need a gap-free matrix
+  # and are willing to pay for it; filled rows carry a FORWARD_FILLED flag
+  # either way.
+  max_ffill_days: 0
 
 analytics:
   # Annualised rolling volatility is reported at each of these windows.
@@ -68,10 +73,21 @@ analytics:
   # charted, but it is excluded from the full-period correlation matrix,
   # where a short overlap produces a confidently wrong number.
   min_history_days: 250
-  # |daily return| above this is flagged in the data-quality report.
-  # Flagged, not dropped: a 60% move is usually real (earnings, a
-  # biotech readout) and silently deleting it is the actual error.
-  extreme_return_threshold: 0.35
+  # |daily return| above this is flagged EXTREME_RETURN. Flagged, not
+  # dropped: a 60% move is usually real (earnings, a biotech readout) and
+  # silently deleting it is the actual error.
+  extreme_return_threshold: 0.50
+  # ...and so is a move this many trailing standard deviations out, which
+  # is the only test that catches a bad print on a name that routinely
+  # moves 15%. The absolute threshold above is the only test that catches
+  # a decimal-point error on a quiet bond ETF. Both are needed.
+  extreme_return_vol_units: 8.0
+  # Window for that trailing sigma. Measured strictly BEFORE the bar being
+  # tested, so an outlier cannot inflate its own yardstick.
+  quality_vol_window: 20
+  # This many consecutive identical observed closes is flagged STALE_PRICE.
+  # A frozen vendor feed and a market with no trades look identical.
+  stale_price_sessions: 3
 
 storage:
   # Root for everything the pipeline writes. Gitignored.

@@ -1,0 +1,154 @@
+{
+  "environment": {
+    "timestamp_utc": "2026-09-18T17:56:50+00:00",
+    "python": "3.12.14",
+    "platform": "Darwin 25.6.0 (arm64)",
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "provider": "yfinance",
+    "config_sha256": "cb859924eecfb678",
+    "symbols": "11",
+    "duckdb": "1.5.5"
+  },
+  "stages": [
+    {
+      "stage": "ingest",
+      "seconds": 0.7311,
+      "rows": 32395,
+      "rows_per_second": 44312.9
+    },
+    {
+      "stage": "read_raw",
+      "seconds": 0.0249,
+      "rows": 32395,
+      "rows_per_second": 1300629.7
+    },
+    {
+      "stage": "clean",
+      "seconds": 0.0508,
+      "rows": 32395,
+      "rows_per_second": 638238.1
+    },
+    {
+      "stage": "write_curated",
+      "seconds": 0.0102,
+      "rows": 32395,
+      "rows_per_second": 3181100.4
+    },
+    {
+      "stage": "analytics",
+      "seconds": 0.0265,
+      "rows": 32384,
+      "rows_per_second": 1222168.4
+    }
+  ],
+  "total_seconds": 0.8434,
+  "fetch_latency_ms": {
+    "trials": 7.0,
+    "symbol_count": 1.0,
+    "rows_per_request": 6.0,
+    "cold_ms": 234.5,
+    "p50_ms": 124.6,
+    "p95_ms": 189.9,
+    "max_ms": 189.9,
+    "mean_ms": 128.8
+  },
+  "freshness": {
+    "provisional_last_session": true,
+    "expected_last_session": "2026-09-17",
+    "benchmark_last_session": "2026-09-18",
+    "per_symbol": [
+      {
+        "symbol": "AAPL",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "MSFT",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "NVDA",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "JPM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "XOM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "JNJ",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "QQQ",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "IWM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "TLT",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "GLD",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "SPY",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      }
+    ]
+  },
+  "notes": [
+    "11 symbols, 16 quality events, 32,395 curated rows"
+  ]
+}

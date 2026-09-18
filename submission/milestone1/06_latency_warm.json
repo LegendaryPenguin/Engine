@@ -1,0 +1,155 @@
+{
+  "environment": {
+    "timestamp_utc": "2026-09-18T17:56:48+00:00",
+    "python": "3.12.14",
+    "platform": "Darwin 25.6.0 (arm64)",
+    "pandas": "3.0.6",
+    "numpy": "2.5.3",
+    "provider": "yfinance",
+    "config_sha256": "cb859924eecfb678",
+    "symbols": "11",
+    "duckdb": "1.5.5"
+  },
+  "stages": [
+    {
+      "stage": "ingest",
+      "seconds": 0.0507,
+      "rows": 0,
+      "rows_per_second": null
+    },
+    {
+      "stage": "read_raw",
+      "seconds": 0.0125,
+      "rows": 32395,
+      "rows_per_second": 2583075.8
+    },
+    {
+      "stage": "clean",
+      "seconds": 0.0622,
+      "rows": 32395,
+      "rows_per_second": 520597.8
+    },
+    {
+      "stage": "write_curated",
+      "seconds": 0.0112,
+      "rows": 32395,
+      "rows_per_second": 2902192.7
+    },
+    {
+      "stage": "analytics",
+      "seconds": 0.0264,
+      "rows": 32384,
+      "rows_per_second": 1225583.4
+    }
+  ],
+  "total_seconds": 0.163,
+  "fetch_latency_ms": {
+    "trials": 7.0,
+    "symbol_count": 1.0,
+    "rows_per_request": 6.0,
+    "cold_ms": 357.2,
+    "p50_ms": 126.4,
+    "p95_ms": 179.2,
+    "max_ms": 179.2,
+    "mean_ms": 136.7
+  },
+  "freshness": {
+    "provisional_last_session": true,
+    "expected_last_session": "2026-09-17",
+    "benchmark_last_session": "2026-09-18",
+    "per_symbol": [
+      {
+        "symbol": "AAPL",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "MSFT",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "NVDA",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "JPM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "XOM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "JNJ",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "QQQ",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "IWM",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "TLT",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "GLD",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      },
+      {
+        "symbol": "SPY",
+        "last_bar": "2026-09-18",
+        "age_days": 0,
+        "sessions_behind_benchmark": 0,
+        "current": true,
+        "note": ""
+      }
+    ]
+  },
+  "notes": [
+    "ingest fetched 0 rows \u2014 everything was already on disk, so this is the warm no-op path, not a download benchmark. Use --refresh for a cold measurement.",
+    "11 symbols, 16 quality events, 32,395 curated rows"
+  ]
+}

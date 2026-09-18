@@ -10,6 +10,9 @@ data/
 reports/*
 !reports/baseline/
 
+# submission/ is NOT ignored. It is captured terminal output from real runs
+# and is the deliverable for grading, so it has to survive a clean clone.
+
 .venv/
 __pycache__/
 *.py[cod]

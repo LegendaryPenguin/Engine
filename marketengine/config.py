@@ -64,6 +64,9 @@ class AnalyticsConfig:
     trading_days_per_year: int
     min_history_days: int
     extreme_return_threshold: float
+    extreme_return_vol_units: float
+    quality_vol_window: int
+    stale_price_sessions: int
 
     @property
     def risk_free_daily(self) -> float:
@@ -206,7 +209,11 @@ def load_config(path: str | Path) -> Config:
     align = str(cal.get("align", "benchmark")).strip().lower()
     if align not in VALID_ALIGN:
         raise ValueError(f"calendar.align must be one of {VALID_ALIGN}, got {align!r}")
-    max_ffill = int(cal.get("max_ffill_days", 3))
+    # Default 0: prices are NOT forward-filled. See clean.py assumption 3 —
+    # a carried price is a fabricated 0% return followed by a fabricated
+    # real one, which at a one-day-to-one-month holding period is an
+    # artefact big enough to trade on.
+    max_ffill = int(cal.get("max_ffill_days", 0))
     if max_ffill < 0:
         raise ValueError("calendar.max_ffill_days must be >= 0")
 
@@ -221,13 +228,26 @@ def load_config(path: str | Path) -> Config:
     if trading_days < 1:
         raise ValueError("analytics.trading_days_per_year must be >= 1")
 
+    quality_vol_window = int(an.get("quality_vol_window", 20))
+    if quality_vol_window < 5:
+        raise ValueError("analytics.quality_vol_window must be >= 5 to estimate a std")
+    vol_units = float(an.get("extreme_return_vol_units", 8.0))
+    if vol_units <= 0:
+        raise ValueError("analytics.extreme_return_vol_units must be > 0")
+    stale_sessions = int(an.get("stale_price_sessions", 3))
+    if stale_sessions < 2:
+        raise ValueError("analytics.stale_price_sessions must be >= 2 (a run needs a repeat)")
+
     analytics = AnalyticsConfig(
         rolling_vol_windows=vol_windows,
         corr_window=corr_window,
         risk_free_annual=float(an.get("risk_free_annual", 0.0)),
         trading_days_per_year=trading_days,
         min_history_days=int(an.get("min_history_days", 250)),
-        extreme_return_threshold=float(an.get("extreme_return_threshold", 0.35)),
+        extreme_return_threshold=float(an.get("extreme_return_threshold", 0.50)),
+        extreme_return_vol_units=vol_units,
+        quality_vol_window=quality_vol_window,
+        stale_price_sessions=stale_sessions,
     )
 
     sto = doc.get("storage") or {}

@@ -32,7 +32,7 @@ account. Takes about 30 seconds from cold, and writes:
 ```
 data/raw/yfinance/<SYM>.parquet     one file per symbol, as downloaded
 data/curated/baseline/prices.parquet  the cleaned, aligned panel
-data/outputs/baseline/*.csv         10 analytics tables
+data/outputs/baseline/*.csv         11 analytics tables (incl. the quality event log)
 data/marketengine.duckdb            SQL views over the above
 reports/baseline/summary.md         the report
 reports/baseline/figures/*.png      5 figures
@@ -48,6 +48,8 @@ python -m marketengine ingest                # download only what is missing
 python -m marketengine clean                 # rebuild the curated panel from raw
 python -m marketengine analyze               # recompute metrics + figures only
 python -m marketengine run --refresh         # re-download the full window
+python -m marketengine bench                 # stage timings, fetch latency, data freshness
+python -m marketengine bench --no-network    # compute only, no API calls
 python -m marketengine query "SELECT symbol, count(*) FROM prices_baseline GROUP BY 1"
 ```
 
@@ -58,7 +60,7 @@ API calls and no waiting.
 ### Tests
 
 ```bash
-./.venv/bin/pytest -q      # 93 passed, 2 skipped, ~1 second, no network
+./.venv/bin/pytest -q      # 121 passed, 2 skipped, ~1.7 seconds, no network
 ```
 
 No test hits the network. The provider adapters are tested against stub
@@ -124,7 +126,8 @@ config/default.yml
  ingest.py ....... incremental download  ->  data/raw/           [network]
       |
       v
- clean.py ........ align to a calendar, gap policy, quality report
+ clean.py ........ quarantine, align to a calendar, gap policy
+      |              flags.py ..... the named quality flags
       |
       v
  store.py ........ Parquet + DuckDB views
@@ -134,6 +137,8 @@ config/default.yml
       |
       +--> plots.py .... 5 figures
       +--> report.py ... summary.md + run_manifest.json
+
+ bench.py ........ stage timings, fetch latency, data freshness  [network]
 ```
 
 `analytics.py` takes and returns pandas objects and reads nothing from
@@ -151,10 +156,71 @@ One row per (date, symbol), long rather than wide:
 | `adj_close` | `float64` | splits **and** dividends → total return |
 | `volume` | `float64` | float, not int, so a missing bar is NaN and not 0 |
 | `filled` | `bool` | *(curated only)* this bar was forward-filled |
+| `flags` | `string` | *(curated only)* comma-joined flag names, `""` when clean |
 
 Timezones are dropped deliberately: a daily bar labels a *session*, not an
 instant, and two vendors stamping the same session 00:00Z and 05:00Z would
 refuse to join.
+
+---
+
+## Speed and freshness
+
+```bash
+python -m marketengine bench --no-network
+```
+
+Two different questions, measured separately because they have nothing to
+do with each other:
+
+```
+stage timings
+  stage              seconds        rows      rows/sec
+  read_raw             0.078      32,395       415,847
+  clean                0.065      32,395       496,976
+  write_curated        0.010      32,395     3,198,348
+  analytics            0.028      32,384     1,177,475
+  TOTAL                0.181
+```
+
+**Throughput** is not the interesting number. 32,395 rows through clean +
+analytics in 0.18 seconds means iteration is free; it does not make the
+output any more correct.
+
+**Freshness** is the interesting number, and `bench` reports it in
+*sessions behind the benchmark* rather than in seconds. A pipeline that
+runs in 180ms on yesterday's close is worse than useless for a
+one-day-to-one-month holding period, because the position it sizes today
+is sized off a price that has already moved. Each symbol is compared to
+SPY's own last session (if SPY has a bar for a date, the market was open),
+and SPY is compared to an independent weekday-and-cutoff calendar, which
+catches the case where the vendor is stale for *every* symbol at once —
+something comparing symbols to each other cannot detect.
+
+`bench` also fires a warning that matters more than any latency figure:
+
+```
+  WARNING: the newest bar is for a session that has not closed yet.
+           Its close is the last trade so far and its volume is partial.
+```
+
+Both vendors serve a partial bar for the session in progress. It is not
+wrong, it is not final, and a signal computed on it will change by 16:00.
+
+With a network, `bench` also times five single-symbol requests and reports
+`cold_ms` separately from `p50_ms`/`p95_ms`/`max_ms` — the first request
+carries TLS, DNS and (for yfinance) a cookie/crumb negotiation, and
+averaging it in makes steady state look three times worse than it is.
+Percentiles, not a mean: the mean hides the one request in twenty that
+takes four seconds, and that is the request that decides whether the daily
+job finishes before the open.
+
+**What this does not claim.** Daily bars are not a live feed. The floor on
+"delay from live pricing" for a daily close is the vendor's own end-of-day
+publication lag, which is minutes to hours after 16:00 New York. Measuring
+it honestly is the point: a number that says the close is 18 hours old is
+what tells you a same-day decision needs a different data path (see
+`ROADMAP.md`, phase 4), not a tuning problem.
 
 ---
 
@@ -204,43 +270,71 @@ report, because a number without them is not interpretable.
    relative statistic exists for it. `intersect` (only dates every ticker
    traded) and `union` (every date any ticker traded) are also available.
 
-3. **Gaps are forward-filled for at most `max_ffill_days` sessions** (3 by
-   default) and **every filled bar is flagged** in the `filled` column, so
-   any downstream analysis can exclude them. Longer gaps are *dropped*
-   rather than filled — a long forward fill invents a flat price, which
-   reads as zero volatility, and zero volatility is a much worse lie than a
-   missing row. A consequence: a late listing starts at its own first real
-   session instead of at a fabricated flat stretch.
+3. **Prices are not forward-filled.** `calendar.max_ffill_days: 0`. A
+   carried price is a fabricated 0% return on the fill day followed by a
+   fabricated real return on the next one, and at a one-day-to-one-month
+   holding period that is a directly tradeable-looking artefact rather than
+   a rounding error. Filling past a security's last real quote is worse
+   still: it manufactures a flat, zero-volatility series for something that
+   no longer trades, and every risk statistic then rewards it. Sessions
+   with no vendor bar are flagged `MISSING_SESSION` and dropped, so a
+   return spanning the hole is honestly a two-day return instead of a
+   made-up pair of one-day returns. The mechanism is kept — set
+   `max_ffill_days: 2` if you need a gap-free matrix — and filled rows
+   carry a `FORWARD_FILLED` flag and a `filled` boolean either way. The
+   fill also never runs past a symbol's own last observed bar, because each
+   series is reindexed onto the calendar *within its own span*.
 
 4. **Volume is never forward-filled.** A carried bar has unknown volume and
    NaN is what unknown means. A carried volume would invent trading
    activity.
 
-5. **Nothing is dropped for being surprising.** Extreme moves, zero-volume
-   sessions, stale price runs and non-positive prices are *counted* in
-   `data_quality.csv` and kept in the data. A 60% single-day move is
-   usually real — earnings, a biotech readout — and deleting it is the
-   actual error. Rows are only ever dropped for having no usable price at
-   all, or for sitting in a gap too long to fill.
+5. **Flag, do not delete.** Extreme moves, zero-volume sessions and stale
+   price runs are named on the row itself in the `flags` column, counted
+   per symbol in `data_quality.csv`, and logged with their triggering
+   values in `quality_events.csv`. All of them stay in the data. A 60%
+   single-day move is usually real — earnings, a biotech readout — and
+   deleting it is the actual error, and the one that makes a backtest look
+   good.
 
-6. **Annualisation.** Returns annualise **geometrically** (CAGR); volatility
+   The only rows that leave the analytical table are **structural
+   impossibilities**: a non-positive price, or a bar whose high is below
+   its own low, open or close. There is no defensible guess at what the
+   real number was, so those rows are quarantined into the event log with
+   their values intact and then treated as missing sessions. The OHLC check
+   carries a one-part-in-a-million relative tolerance, because vendors
+   round to four decimals and a check that fires on rounding is a check
+   nobody reads.
+
+6. **An extreme return is `|r| > 50%` OR `|r| > 8` trailing standard
+   deviations**, over a 20-session window that *ends before* the bar being
+   tested — so an outlier cannot inflate the yardstick it is measured
+   against, and the test is one a live strategy could actually run. Both
+   arms are needed: the absolute threshold is the only thing that catches a
+   decimal-point error on a quiet bond ETF, whose "8 sigma" is a 3% move it
+   makes anyway, and the relative one is the only thing that catches a bad
+   print on a name that routinely moves 15%. On the baseline run this
+   flags 16 rows out of 32,395 — every one of them a real event (NVDA
+   +29.8% on 2016-11-11, SPY -3.2% on 2018-10-10), all kept.
+
+7. **Annualisation.** Returns annualise **geometrically** (CAGR); volatility
    scales by `sqrt(252)`; alpha annualises **arithmetically** (daily alpha ×
    252) because alpha is an average per-period abnormal return, not a
    compounded path. The risk-free rate is de-annualised geometrically,
    `(1+rf)^(1/252) - 1`, not divided by 252.
 
-7. **The risk-free rate is a flat 2% assumption.** It affects Sharpe,
+8. **The risk-free rate is a flat 2% assumption.** It affects Sharpe,
    Sortino and CAPM alpha. Swap in a real T-bill series before quoting a
    Sharpe ratio anywhere it matters.
 
-8. **Pairwise windows.** A symbol with less history than the benchmark is
+9. **Pairwise windows.** A symbol with less history than the benchmark is
    compared against it only over the sessions they share, and
    `overlap_with_benchmark` in `metrics_summary.csv` says how many that
    was. The full-period correlation matrix blanks any pair sharing fewer
    than `min_history_days` (250) sessions, because a correlation from a
    30-day overlap is confidently wrong.
 
-9. **Capture ratios use geometric mean per-day returns**, not the textbook
+10. **Capture ratios use geometric mean per-day returns**, not the textbook
    ratio of compounded totals. Over a sample this long the textbook version
    saturates and stops discriminating: SPY's up days compound to roughly
    +1,400,000% and its down days to roughly -99.99%, which made every
@@ -248,7 +342,7 @@ report, because a number without them is not interpretable.
    up-capture of 115,008. Geometric means remove the horizon from the
    statistic.
 
-10. **`trading_days_per_year: 252`** is a convention, not a count of the
+11. **`trading_days_per_year: 252`** is a convention, not a count of the
     actual sessions in any given year.
 
 ---
@@ -278,8 +372,9 @@ quality, the figures, and the assumptions above.
 `prices_adj_close`, `daily_returns`, `cumulative_returns`,
 `rolling_volatility_{21,63,252}d`, `correlation_matrix`,
 `rolling_corr_63d_vs_SPY`, `relative_cumulative_vs_SPY`,
-`metrics_summary` (~28 columns per symbol), `data_quality`,
-`ingest_report`.
+`metrics_summary` (~28 columns per symbol), `data_quality` (per-symbol flag
+counts), `quality_events` (one row per flagged bar, with the value that
+triggered it), `ingest_report`.
 
 **Figures** (`reports/<run_id>/figures/`):
 

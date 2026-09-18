@@ -1,0 +1,44 @@
+$ cat data/outputs/baseline/data_quality.csv  (rendered)
+
+--- per-symbol quality report ---
+symbol      role first_date  last_date  rows  raw_rows_in_window  observed_bars  expected_sessions_in_span  coverage_pct  rows_quarantined  gaps_found  gaps_forward_filled  rows_dropped_missing  flag_missing_session  flag_forward_filled  flag_duplicate_date  flag_nonpositive_price  flag_ohlc_inconsistent  flag_extreme_return  flag_stale_price  flag_zero_volume  adj_close_equals_close  short_history
+  AAPL  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    1                 0                 0                   False          False
+   GLD  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    0                 0                 0                    True          False
+   IWM  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    0                 0                 0                   False          False
+   JNJ  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    3                 0                 0                   False          False
+   JPM  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    1                 0                 0                   False          False
+  MSFT  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    4                 0                 0                   False          False
+  NVDA  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    6                 0                 0                   False          False
+   QQQ  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    0                 0                 0                   False          False
+   TLT  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    0                 0                 0                   False          False
+   XOM  universe 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    0                 0                 0                   False          False
+   SPY benchmark 2015-01-02 2026-09-18  2945                2945           2945                       2945           100                 0           0                    0                     0                     0                    0                    0                       0                       0                    1                 0                 0                   False          False
+
+--- flag totals across the universe ---
+flag_missing_session       0
+flag_forward_filled        0
+flag_duplicate_date        0
+flag_nonpositive_price     0
+flag_ohlc_inconsistent     0
+flag_extreme_return       16
+flag_stale_price           0
+flag_zero_volume           0
+
+--- quality event log: 16 event(s) ---
+      date symbol           flag action         detail
+2015-04-24   MSFT EXTREME_RETURN   kept return=+10.45%
+2015-08-07   NVDA EXTREME_RETURN   kept return=+12.37%
+2015-10-23   MSFT EXTREME_RETURN   kept return=+10.08%
+2015-11-06   NVDA EXTREME_RETURN   kept return=+13.86%
+2016-05-13   NVDA EXTREME_RETURN   kept return=+15.21%
+2016-11-11   NVDA EXTREME_RETURN   kept return=+29.81%
+2017-02-01   AAPL EXTREME_RETURN   kept  return=+6.10%
+2017-05-10   NVDA EXTREME_RETURN   kept return=+17.83%
+2017-10-27   MSFT EXTREME_RETURN   kept  return=+6.41%
+2018-10-10    SPY EXTREME_RETURN   kept  return=-3.17%
+2018-12-14    JNJ EXTREME_RETURN   kept return=-10.04%
+2023-05-25   NVDA EXTREME_RETURN   kept return=+24.37%
+2023-07-20    JNJ EXTREME_RETURN   kept  return=+6.07%
+2024-11-06    JPM EXTREME_RETURN   kept return=+11.54%
+2025-04-01    JNJ EXTREME_RETURN   kept  return=-7.59%
+2026-07-30   MSFT EXTREME_RETURN   kept return=+15.51%

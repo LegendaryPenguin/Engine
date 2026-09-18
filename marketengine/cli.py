@@ -6,6 +6,7 @@ Command line.
     python -m marketengine ingest --dry-run    # what WOULD be downloaded
     python -m marketengine clean
     python -m marketengine analyze
+    python -m marketengine bench               # latency, throughput, freshness
     python -m marketengine query "SELECT ..."  # SQL against the curated panel
     python -m marketengine config              # resolved config + paths
 
@@ -51,6 +52,16 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("clean", help="rebuild the curated panel from stored raw data")
     sub.add_parser("analyze", help="recompute metrics and figures from the curated panel")
     sub.add_parser("config", help="print the resolved configuration and output paths")
+
+    bn = sub.add_parser("bench", help="measure stage timings, fetch latency and data freshness")
+    bn.add_argument("--no-network", action="store_true",
+                    help="skip ingest and fetch-latency trials; measure compute only")
+    bn.add_argument("--refresh", action="store_true",
+                    help="re-download the full window, for a cold ingest measurement")
+    bn.add_argument("--trials", type=int, default=5,
+                    help="live fetch requests to time (default: 5)")
+    bn.add_argument("--json", type=Path, default=None,
+                    help="also write the measurements as JSON to this path")
 
     q = sub.add_parser("query", help="run SQL against the curated panel via DuckDB")
     q.add_argument("sql", help="e.g. \"SELECT symbol, count(*) FROM prices_latest GROUP BY 1\"")
@@ -116,6 +127,18 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "ingest":
             pipeline.stage_ingest(cfg, refresh=args.refresh, dry_run=args.dry_run)
+            return 0
+
+        if args.command == "bench":
+            from . import bench as bench_mod
+
+            result = bench_mod.run_bench(
+                cfg, network=not args.no_network, refresh=args.refresh,
+                trials=args.trials, json_path=args.json,
+            )
+            print(bench_mod.render(result))
+            if args.json:
+                print(f"\njson -> {args.json}")
             return 0
 
         if args.command == "clean":

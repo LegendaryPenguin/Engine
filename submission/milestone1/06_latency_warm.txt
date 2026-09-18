@@ -1,0 +1,64 @@
+$ ./.venv/bin/python -m marketengine bench --trials 7 --json submission/milestone1/06_latency_warm.json
+
+  everything requested is already on disk (use --refresh to re-download)
+environment
+  timestamp_utc    2026-09-18T17:56:48+00:00
+  python           3.12.14
+  platform         Darwin 25.6.0 (arm64)
+  pandas           3.0.6
+  numpy            2.5.3
+  provider         yfinance
+  config_sha256    cb859924eecfb678
+  symbols          11
+  duckdb           1.5.5
+
+stage timings
+  stage              seconds        rows      rows/sec
+  ingest               0.051           -             -
+  read_raw             0.013      32,395     2,583,076
+  clean                0.062      32,395       520,598
+  write_curated        0.011      32,395     2,902,193
+  analytics            0.026      32,384     1,225,583
+  TOTAL                0.163
+
+provider fetch latency (one symbol, last 7 calendar days)
+  trials           7.0
+  symbol_count     1.0
+  rows_per_request 6.0
+  cold_ms          357.2
+  p50_ms           126.4
+  p95_ms           179.2
+  max_ms           179.2
+  mean_ms          136.7
+
+data freshness
+  expected last session   2026-09-17
+  benchmark last session  2026-09-18
+  WARNING: the newest bar is for a session that has not closed yet.
+           Its close is the last trade so far and its volume is partial.
+           Pin window.end, or drop the last bar, before trading on it.
+
+  symbol      last_bar  age_days   sessions_behind  current
+  AAPL      2026-09-18         0                 0      yes
+  MSFT      2026-09-18         0                 0      yes
+  NVDA      2026-09-18         0                 0      yes
+  JPM       2026-09-18         0                 0      yes
+  XOM       2026-09-18         0                 0      yes
+  JNJ       2026-09-18         0                 0      yes
+  QQQ       2026-09-18         0                 0      yes
+  IWM       2026-09-18         0                 0      yes
+  TLT       2026-09-18         0                 0      yes
+  GLD       2026-09-18         0                 0      yes
+  SPY       2026-09-18         0                 0      yes
+
+  every symbol is current with the benchmark's last session
+
+note: ingest fetched 0 rows — everything was already on disk, so this is the warm no-op path, not a download benchmark. Use --refresh for a cold measurement.
+note: 11 symbols, 16 quality events, 32,395 curated rows
+
+json -> submission/milestone1/06_latency_warm.json
+real 2.11
+user 0.83
+sys 0.17
+
+[exit code: 0]
