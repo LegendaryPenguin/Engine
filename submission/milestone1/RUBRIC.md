@@ -40,6 +40,7 @@ Paths are relative to the repository root.
 | Correlations | `11_summary.md` §3; `correlation_matrix.csv`; `figures/correlation_heatmap.png`; `rolling_corr_63d_vs_SPY.csv` |
 | Benchmark-relative performance | `11_summary.md` §2 — beta, alpha, R², tracking error, information ratio, active return, up/down capture; `figures/relative_to_benchmark.png` |
 | Risk metrics | `11_summary.md` §1 — Sharpe, Sortino, max drawdown, empirical 5% VaR |
+| At least two visualizations or summary outputs | 5 figures in `figures/` + the report `11_summary.md` + 13 CSV tables |
 | Total-return basis stated | returns from `adj_close`; README assumption 1 |
 | Correctness, not self-snapshots | `02_tests.txt` — closed-form tests per metric, incl. regressions for the Sharpe-on-constant-series and capture-ratio bugs |
 
@@ -52,7 +53,7 @@ Paths are relative to the repository root.
 | Every stage independently runnable | `01_config.txt`; `ingest`/`clean`/`analyze`/`report`/`bench`/`query`/`config` subcommands |
 | Eager config validation | `marketengine/config.py`; `tests/test_config.py` |
 | Errors are legible, not tracebacks | `marketengine/cli.py` error handling |
-| Tests | `02_tests.txt` — 121 passed, 2 skipped, 1.25s |
+| Tests | `02_tests.txt` — 121 passed, 2 skipped, 1.29s |
 | Secrets not in config | `.gitignore`, `.env.example`, `marketengine/providers/alpaca_provider.py` |
 | Speed | `06_latency_warm.txt` / `06_latency_cold.txt` — stage timings, rows/sec, fetch-latency percentiles |
 

@@ -22,7 +22,7 @@ provider, 11 symbols (10 tickers + SPY benchmark), 2015-01-02 → 2026-09-18,
 
 | | |
 |---|---|
-| Tests | **121 passed, 2 skipped**, 1.25s, zero network calls |
+| Tests | **121 passed, 2 skipped**, 1.29s, zero network calls |
 | Cold run (`run --refresh`, full 11-year re-download) | **2.24s** wall clock |
 | Warm run (`run`, nothing to download) | **1.59s** wall clock |
 | Ingest, cold | 0.731s for 32,395 bars = **44,313 rows/sec** |
@@ -48,7 +48,7 @@ the newest bar belongs to a session that has not closed yet. See
 |---|---|---|
 | `00_environment.txt` | `uname`, `python --version`, `pip freeze` | exact platform and every pinned dependency version |
 | `01_config.txt` | `python -m marketengine config` | the resolved configuration, its SHA-256, and every output path — nothing hard-coded |
-| `02_tests.txt` | `pytest -q` | 121 passed / 2 skipped in 1.25s. No test touches the network; the 2 skips are live-Alpaca tests that need credentials |
+| `02_tests.txt` | `pytest -q` | 121 passed / 2 skipped in 1.29s. No test touches the network; the 2 skips are live-Alpaca tests that need credentials |
 | `03_ingest_dry_run.txt` | `ingest --dry-run` | the per-symbol download plan without downloading, i.e. the incremental logic made inspectable |
 | `04_run_cold.txt` | `run --refresh` | full pipeline from a re-downloaded window: 32,395 rows fetched, timed |
 | `05_run_warm.txt` | `run` | the same command immediately after: **0 new rows fetched**. Idempotent ingest, demonstrated rather than claimed |
@@ -84,8 +84,8 @@ lookup table, for grading against the rubric directly.
 - **Reproducible by construction.** `10_run_manifest.json` carries the
   SHA-256 of the config file's *bytes*, every library version, the
   provider's adjustment policy, per-symbol coverage and the list of files
-  written. Two sets of numbers can be proven to have come from the same
-  inputs, which a list of tickers cannot do.
+  written. Given two sets of numbers you can tell whether they came from the
+  same inputs. A list of tickers cannot tell you that.
 - **Incremental and idempotent.** `04_run_cold.txt` fetches 32,395 rows;
   `05_run_warm.txt`, run seconds later, fetches **0** and prints
   "everything requested is already on disk". Front-of-window coverage is
@@ -102,7 +102,7 @@ lookup table, for grading against the rubric directly.
 
 ### Cleaning, alignment and storage — 10 pts
 
-- **Three separate outputs**, per the data-engineering literature: the
+- **Three separate outputs** instead of one overwritten file: the
   immutable raw vendor response (`data/raw/`, never modified), the clean
   analytical table (`data/curated/`), and a quality-event log
   (`quality_events.csv`). Cleaning is a separate stage precisely so all
@@ -178,7 +178,7 @@ lookup table, for grading against the rubric directly.
 - Provider errors and config errors print as one-line messages without a
   traceback: those mean the input or the vendor is wrong, and a traceback
   would imply the program is broken.
-- **121 tests, 2 skipped, 1.25 seconds, zero network calls.** Providers are
+- **121 tests, 2 skipped, 1.29 seconds, zero network calls.** Providers are
   tested against stub responses; the 2 skips are live-API tests that run
   only when Alpaca credentials are present.
 - Secrets never touch a config file: Alpaca credentials come from the

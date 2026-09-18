@@ -15,6 +15,13 @@ off disk.
 11 symbols, 2015-01-02 → 2026-09-18, 32,395 bars. Committed so the output
 is readable without running anything.
 
+**Grading this?** [`submission/milestone1/`](submission/milestone1/) is
+captured terminal output from real runs — tests, a cold run, a warm run,
+latency, SQL over the curated panel, the quality event log.
+[`RUBRIC.md`](submission/milestone1/RUBRIC.md) in that folder maps each
+rubric line to the file that shows it.
+[`ROADMAP.md`](ROADMAP.md) is where this goes next.
+
 ---
 
 ## Run it
@@ -27,12 +34,14 @@ python -m venv .venv
 ```
 
 That is the whole thing. yfinance needs no credentials, no API key and no
-account. Takes about 30 seconds from cold, and writes:
+account. A full cold run — download eleven years for eleven symbols, clean
+it, compute everything, draw the figures, write the report — takes about two
+seconds and produces:
 
 ```
 data/raw/yfinance/<SYM>.parquet     one file per symbol, as downloaded
 data/curated/baseline/prices.parquet  the cleaned, aligned panel
-data/outputs/baseline/*.csv         11 analytics tables (incl. the quality event log)
+data/outputs/baseline/*.csv         13 analytics tables (incl. the quality event log)
 data/marketengine.duckdb            SQL views over the above
 reports/baseline/summary.md         the report
 reports/baseline/figures/*.png      5 figures
@@ -60,7 +69,7 @@ API calls and no waiting.
 ### Tests
 
 ```bash
-./.venv/bin/pytest -q      # 121 passed, 2 skipped, ~1.7 seconds, no network
+./.venv/bin/pytest -q      # 121 passed, 2 skipped, ~1.3 seconds, no network
 ```
 
 No test hits the network. The provider adapters are tested against stub
@@ -167,25 +176,29 @@ refuse to join.
 ## Speed and freshness
 
 ```bash
-python -m marketengine bench --no-network
+python -m marketengine bench
 ```
 
 Two different questions, measured separately because they have nothing to
-do with each other:
+do with each other. Real output, from
+[`submission/milestone1/06_latency_warm.txt`](submission/milestone1/06_latency_warm.txt):
 
 ```
 stage timings
   stage              seconds        rows      rows/sec
-  read_raw             0.078      32,395       415,847
-  clean                0.065      32,395       496,976
-  write_curated        0.010      32,395     3,198,348
-  analytics            0.028      32,384     1,177,475
-  TOTAL                0.181
+  ingest               0.051           -             -
+  read_raw             0.013      32,395     2,583,076
+  clean                0.062      32,395       520,598
+  write_curated        0.011      32,395     2,902,193
+  analytics            0.026      32,384     1,225,583
+  TOTAL                0.163
 ```
 
 **Throughput** is not the interesting number. 32,395 rows through clean +
-analytics in 0.18 seconds means iteration is free; it does not make the
-output any more correct.
+analytics in 0.16 seconds means iteration is free; it does not make the
+output any more correct. (`ingest` is 0.051s there because everything was
+already on disk. `bench --refresh` re-downloads the whole window and reports
+0.731s for 32,395 rows, about 44,000 rows a second.)
 
 **Freshness** is the interesting number, and `bench` reports it in
 *sessions behind the benchmark* rather than in seconds. A pipeline that
