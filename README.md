@@ -15,12 +15,23 @@ off disk.
 11 symbols, 2015-01-02 → 2026-09-18, 32,395 bars. Committed so the output
 is readable without running anything.
 
-**Grading this?** [`submission/milestone1/`](submission/milestone1/) is
+**Grading Milestone 1?** [`submission/milestone1/`](submission/milestone1/) is
 captured terminal output from real runs — tests, a cold run, a warm run,
 latency, SQL over the curated panel, the quality event log.
 [`RUBRIC.md`](submission/milestone1/RUBRIC.md) in that folder maps each
 rubric line to the file that shows it.
-[`ROADMAP.md`](ROADMAP.md) is where this goes next.
+
+**Grading Milestone 2?** [`submission/milestone2/`](submission/milestone2/) is
+the strategy prototype and the basic backtest: three explicit score rules,
+a next-open simulator, and the comparison against SPY and against
+equal-weight buy-and-hold of the same names.
+[`RUBRIC.md`](submission/milestone2/RUBRIC.md) maps each rubric line to the
+file that shows it. The run itself is
+[`reports/baseline/backtest.md`](reports/baseline/backtest.md).
+
+[`ROADMAP.md`](ROADMAP.md) is where this goes next. The end state is a
+research engine that can identify names and, later, trade them. Milestone 2
+is the first time a score becomes a position. It does not place orders.
 
 ---
 
@@ -60,7 +71,13 @@ python -m marketengine run --refresh         # re-download the full window
 python -m marketengine bench                 # stage timings, fetch latency, data freshness
 python -m marketengine bench --no-network    # compute only, no API calls
 python -m marketengine query "SELECT symbol, count(*) FROM prices_baseline GROUP BY 1"
+python -m marketengine backtest             # scores, simulation, comparison. No network
 ```
+
+`backtest` reads the curated panel and does not download anything. `run`
+calls it at the end when the config has a `strategies:` section, which
+`config/default.yml` does. The rules, the top-N book, and the cost
+assumption all live in that section. They are not in the code.
 
 `analyze` is the one used most while iterating: it re-reads the curated
 Parquet and touches no network, so changing a metric or a chart costs no
@@ -69,7 +86,7 @@ API calls and no waiting.
 ### Tests
 
 ```bash
-./.venv/bin/pytest -q      # 123 passed, ~1.4 seconds
+./.venv/bin/pytest -q      # 143 passed, 2 skipped without Alpaca credentials
 ```
 
 Two tests hit the network and the rest do not. The provider adapters are
@@ -148,6 +165,17 @@ config/default.yml
       |
       +--> plots.py .... 5 figures
       +--> report.py ... summary.md + run_manifest.json
+      |
+      v
+ features.py ..... trailing return, volatility, distance to high   [no I/O]
+      |
+      v
+ strategies.py ... scores per (date, symbol). Not positions
+      |
+      v
+ backtest.py ..... next open, costs, book, vs SPY and equal-weight
+      |
+      +--> backtest.md, three figures
 
  bench.py ........ stage timings, fetch latency, data freshness  [network]
 ```

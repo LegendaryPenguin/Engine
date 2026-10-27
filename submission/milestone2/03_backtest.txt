@@ -1,0 +1,20 @@
+$ C:\Users\nisch\Desktop\Engine\.venv\Scripts\python.exe -m marketengine backtest
+
+[backtest] scoring and simulating
+      common window starts 2015-02-03 (warmup before every strategy can fire is dropped)
+      long-only top 3 of 10, equal weight, 5 bp one-way
+      at 5 bp one-way
+        name  cagr ann_volatility sharpe max_drawdown avg_holding_sessions annual_turnover alpha_annual
+    momentum 18.6%          20.2%   0.85       -34.1%                  6.3          39.73x         8.2%
+    reversal 14.4%          20.5%   0.66       -38.2%                  3.3          77.35x         2.2%
+    breakout  8.5%          15.6%   0.48       -21.9%                  3.4          73.67x         1.2%
+equal_weight 21.3%          15.6%   1.19       -26.8%               2948.0           0.04x         7.8%
+         SPY 13.8%          16.8%   0.73       -32.0%               2948.0           0.04x         0.0%
+      momentum: breakeven vs SPY at 10.2 bp; reversal: breakeven vs SPY at 5.4 bp; breakout: breakeven vs SPY at 1.8 bp
+      strongest score correlation: reversal vs breakout = -0.61
+      report  -> reports\baseline\backtest.md
+
+done.
+
+
+[exit code: 0]

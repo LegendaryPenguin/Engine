@@ -232,6 +232,13 @@ Pure functions from the panel to features, with the same discipline
 
 ## Phase 6 — Strategy layer as score tables
 
+Milestone 2 builds this layer, and the basic simulator in phase 7 that
+the rubric asks to see running. The evidence is
+`submission/milestone2/`. What phase 6 required is in place. What it
+deliberately does not include — a split-only price series, a
+point-in-time universe, a participation cap — is still the work of
+phases 2, 3 and the rest of phase 7.
+
 Three deliberately simple, well-documented short-horizon strategies. Each
 one emits a **score per (date, symbol)** and nothing else — no positions,
 no orders. Keeping signal separate from sizing is what makes them
@@ -247,19 +254,28 @@ comparable and testable.
 
 **Exit criteria**
 
-- 6.1 Each strategy is a pure function `(features, as_of) -> scores`, with a
-  test on a hand-built cross-section where the intended ranking is obvious.
-- 6.2 Every score for date `t` uses only information available at `t`'s close;
-  covered by the phase 5 leakage test extended to scores.
-- 6.3 Correlation between the three score series is reported. If they are 0.9
-  correlated they are one strategy and the roadmap says so out loud.
-- 6.4 Neither strategy has a parameter that was chosen by looking at the
-  test-period result. Parameters are stated up front, in the config, with the
-  reason.
+| # | Criterion | Status |
+|---|---|---|
+| 6.1 | Each strategy is a pure function from prices to scores, with a test on a hand-built cross-section where the intended ranking is obvious | pass — `marketengine/strategies.py`, `tests/test_backtest.py` |
+| 6.2 | Every score for date `t` uses only information available at `t`'s close | pass — truncation test in `tests/test_backtest.py` |
+| 6.3 | Correlation between the three score series is reported. If they are 0.9 correlated they are one strategy and the report says so | pass — `reports/baseline/backtest.md` section 5. Strongest pair on the baseline run is reversal vs breakout at -0.61, so they are three strategies |
+| 6.4 | No parameter was chosen by looking at the test-period result. Parameters are in the config, with the reason | pass — `config/default.yml` `strategies:` |
+
+The breakout still scores `adj_close`, not a split-adjusted series that
+excludes dividends. That series is phase 2. The report says so, rather
+than pretending the two-price rule already exists.
 
 ---
 
 ## Phase 7 — Portfolio construction and the execution simulator
+
+Milestone 2 ships the basic version of this: next-open fills, a flat
+one-way cost, the 0/5/10/25 bp sweep, turnover, and holding period.
+The trade log records the raw open. P&L uses the adjusted open, because
+a split is not a loss and this pipeline does not yet store corporate
+actions as events. Participation caps (7.5) are not built. A three-name
+equal-weight book does not check its weight against the day's volume,
+and the report says so.
 
 Where most backtests quietly become fiction.
 

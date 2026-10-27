@@ -171,9 +171,20 @@ def stage_report(cfg: Config, *, panel: pd.DataFrame, quality: pd.DataFrame,
 
 
 def run(cfg: Config, *, refresh: bool = False) -> dict[str, Path]:
-    """The whole pipeline, in order."""
+    """The whole pipeline, in order.
+
+    When the config has a `strategies` section, the backtest runs on the
+    panel just built. It does not touch the network: the download already
+    happened in `ingest`, and the simulator reads the curated frame.
+    """
     ingest_report = stage_ingest(cfg, refresh=refresh)
     panel, quality, events = stage_clean(cfg)
     analysis = stage_analyze(cfg, panel)
-    return stage_report(cfg, panel=panel, quality=quality, events=events,
-                        ingest_report=ingest_report, analysis=analysis)
+    paths = stage_report(cfg, panel=panel, quality=quality, events=events,
+                         ingest_report=ingest_report, analysis=analysis)
+    if cfg.strategies is not None:
+        from .backtest import run_backtest
+
+        result = run_backtest(cfg, panel)
+        paths["backtest"] = Path(result.report_path)
+    return paths

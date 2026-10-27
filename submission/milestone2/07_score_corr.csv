@@ -1,0 +1,4 @@
+,momentum,reversal,breakout
+momentum,1,-0.3338592707,0.5393634974
+reversal,-0.3338592707,1,-0.609864267
+breakout,0.5393634974,-0.609864267,1

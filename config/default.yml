@@ -100,3 +100,37 @@ outputs:
   figures: true
   # PNG dots-per-inch for saved figures.
   dpi: 150
+
+# =====================================================================
+# Milestone 2 — strategy prototype and basic backtest.
+#
+# These parameters were written down before any result on this universe
+# was looked at. They are the short-horizon rules in ROADMAP.md, not a
+# search. Changing one of them changes the SHA-256 of this file, so a
+# result can be traced back to the rule that produced it.
+# =====================================================================
+strategies:
+  momentum:
+    # About one month of sessions. The skipped session is the short-term
+    # reversal that otherwise contaminates a one-month momentum signal.
+    window: 20
+    skip: 1
+  reversal:
+    # Five sessions is inside the holding horizon. Scaling by a longer
+    # trailing volatility stops a quiet ETF and a single stock from being
+    # ranked as if a 5% move meant the same thing in both.
+    return_window: 5
+    vol_window: 20
+  breakout:
+    # Same horizon as momentum, opposite construction, so a correlation
+    # near 1 between them would mean they are one rule.
+    window: 20
+  portfolio:
+    # Top 3 of the 10-name universe, equal weight. Long only.
+    # 1/n_long each; an empty slot stays cash rather than concentrating.
+    n_long: 3
+    # One-way cost in basis points, charged on the notional that changes
+    # hands. 5 bp is the assumption. The grid is how that assumption is
+    # checked, not a menu of alternatives to pick the best from.
+    cost_bps: 5
+    cost_grid_bps: [0, 5, 10, 25]

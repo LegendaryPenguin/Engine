@@ -192,3 +192,86 @@ def plot_risk_return(summary: pd.DataFrame, benchmark: str, path: Path,
     _style_axes(ax, "Risk vs return, annualised, full sample", "CAGR")
     ax.set_xlabel("annualised volatility", fontsize=9)
     return _save(fig, path, dpi)
+
+
+# =====================================================================
+# Milestone 2 — strategy backtest
+# =====================================================================
+
+_STRATEGY_COLOURS = {
+    "momentum": "#1F4E79",
+    "reversal": "#C65911",
+    "breakout": "#2E7D4F",
+    "equal_weight": "#888888",
+}
+
+
+def plot_strategy_equity(returns: pd.DataFrame, path: Path, dpi: int = 150, *,
+                         benchmark: str, cost_bps: float) -> Path:
+    """Growth of $1 for each book. Log scale, benchmark drawn heaviest.
+
+    Log, for the same reason as the single-name growth chart: a large
+    winner otherwise pins every other line to the floor, and equal
+    vertical distance stops meaning equal percentage growth.
+    """
+    curve = analytics.growth_of_one(returns)
+    fig, ax = plt.subplots(figsize=(11, 6))
+    for name in curve.columns:
+        if name == benchmark:
+            style = dict(BENCH_STYLE)
+        elif name == "equal_weight":
+            style = {"color": "#888888", "linewidth": 1.4, "linestyle": "--"}
+        else:
+            style = {"color": _STRATEGY_COLOURS.get(name, "#333333"), "linewidth": 1.6}
+        ax.plot(curve.index, curve[name], label=name, **style)
+    ax.set_yscale("log")
+    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"${v:,.2f}"))
+    ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+    _style_axes(ax, f"Growth of $1 after {cost_bps:g} bp one-way costs", "value of $1")
+    ax.legend(ncols=5, fontsize=8, frameon=False, loc="upper left")
+    return _save(fig, path, dpi)
+
+
+def plot_strategy_drawdown(returns: pd.DataFrame, path: Path, dpi: int = 150) -> Path:
+    """Peak-to-trough drawdown of each book. The depth is the point."""
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    for name in returns.columns:
+        dd = analytics.drawdown_series(returns[name])
+        if name == "equal_weight":
+            style = {"color": "#888888", "linewidth": 1.2, "linestyle": "--"}
+        elif name not in _STRATEGY_COLOURS and name != "equal_weight":
+            style = dict(BENCH_STYLE)
+        else:
+            style = {"color": _STRATEGY_COLOURS.get(name, "#111111"), "linewidth": 1.3}
+        ax.plot(dd.index, dd, label=name, **style)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1.0))
+    _style_axes(ax, "Drawdown from peak", "drawdown")
+    ax.legend(ncols=5, fontsize=8, frameon=False, loc="lower left")
+    return _save(fig, path, dpi)
+
+
+def plot_cost_sweep(cost_grid: pd.DataFrame, path: Path, dpi: int = 150) -> Path:
+    """CAGR of each strategy, and of the benchmark, as one-way cost rises.
+
+    The benchmark is drawn once. It barely moves — a buy-and-hold pays
+    the cost a single time — which is the comparison the chart is for.
+    """
+    fig, ax = plt.subplots(figsize=(8.5, 5.5))
+    for name, colour in _STRATEGY_COLOURS.items():
+        if name == "equal_weight":
+            continue
+        sub = cost_grid.loc[cost_grid["name"] == name]
+        if sub.empty:
+            continue
+        ax.plot(sub["cost_bps"], sub["cagr"], marker="o", color=colour, label=name, linewidth=1.6)
+    bench = cost_grid.drop_duplicates("cost_bps")
+    if not bench.empty and "benchmark_cagr" in bench.columns:
+        ax.plot(bench["cost_bps"], bench["benchmark_cagr"], marker="D", **{
+            "color": "#111111", "linewidth": 1.6, "linestyle": "--", "label": "benchmark",
+        })
+    ax.axhline(0.0, color="#888888", linewidth=0.8)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1.0))
+    ax.set_xlabel("one-way cost, basis points", fontsize=9)
+    _style_axes(ax, "Annualised return against trading cost", "CAGR")
+    ax.legend(fontsize=8, frameon=False, loc="best")
+    return _save(fig, path, dpi)

@@ -91,6 +91,42 @@ class OutputConfig:
 
 
 @dataclass(frozen=True)
+class MomentumConfig:
+    window: int
+    skip: int
+
+
+@dataclass(frozen=True)
+class ReversalConfig:
+    return_window: int
+    vol_window: int
+
+
+@dataclass(frozen=True)
+class BreakoutConfig:
+    window: int
+
+
+@dataclass(frozen=True)
+class PortfolioConfig:
+    n_long: int
+    cost_bps: float
+    cost_grid_bps: tuple[float, ...]
+
+
+@dataclass(frozen=True)
+class StrategiesConfig:
+    """The Milestone 2 rules. Absent means the data pipeline still runs
+    and `backtest` refuses, rather than inventing parameters the config
+    did not state."""
+
+    momentum: MomentumConfig
+    reversal: ReversalConfig
+    breakout: BreakoutConfig
+    portfolio: PortfolioConfig
+
+
+@dataclass(frozen=True)
 class Config:
     run_id: str
     provider: str
@@ -102,6 +138,7 @@ class Config:
     outputs: OutputConfig
     source_path: Path
     source_sha256: str
+    strategies: StrategiesConfig | None = None
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
 
     # ---- where things go -------------------------------------------
@@ -259,6 +296,8 @@ def load_config(path: str | Path) -> Config:
     out = doc.get("outputs") or {}
     outputs = OutputConfig(figures=bool(out.get("figures", True)), dpi=int(out.get("dpi", 150)))
 
+    strategies = _parse_strategies(doc.get("strategies"))
+
     return Config(
         run_id=run_id,
         provider=provider,
@@ -270,5 +309,65 @@ def load_config(path: str | Path) -> Config:
         outputs=outputs,
         source_path=path,
         source_sha256=sha,
+        strategies=strategies,
         raw=doc,
     )
+
+
+def _parse_strategies(section: Any) -> StrategiesConfig | None:
+    """Parse the strategy block. `None` in the file means "not this run".
+
+    Every number a backtest depends on is required once the block exists.
+    A default here would be a parameter the report could not point at.
+    """
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ValueError("strategies: expected a mapping")
+
+    mom = _require(section, "momentum", "strategies")
+    rev = _require(section, "reversal", "strategies")
+    brk = _require(section, "breakout", "strategies")
+    port = _require(section, "portfolio", "strategies")
+
+    momentum = MomentumConfig(
+        window=_at_least(mom, "window", "strategies.momentum", 2),
+        skip=_at_least(mom, "skip", "strategies.momentum", 0),
+    )
+    reversal = ReversalConfig(
+        return_window=_at_least(rev, "return_window", "strategies.reversal", 1),
+        vol_window=_at_least(rev, "vol_window", "strategies.reversal", 2),
+    )
+    breakout = BreakoutConfig(window=_at_least(brk, "window", "strategies.breakout", 2))
+
+    n_long = _at_least(port, "n_long", "strategies.portfolio", 1)
+    cost = float(_require(port, "cost_bps", "strategies.portfolio"))
+    if cost < 0:
+        raise ValueError("strategies.portfolio.cost_bps must be >= 0")
+    grid_raw = _require(port, "cost_grid_bps", "strategies.portfolio")
+    if not isinstance(grid_raw, list) or not grid_raw:
+        raise ValueError("strategies.portfolio.cost_grid_bps: expected a non-empty list")
+    grid = tuple(float(v) for v in grid_raw)
+    if any(v < 0 for v in grid):
+        raise ValueError("strategies.portfolio.cost_grid_bps: every value must be >= 0")
+    if cost not in grid:
+        # The headline cost has to be one of the points the sweep reports,
+        # or the table and the prose describe two different experiments.
+        raise ValueError(
+            "strategies.portfolio.cost_bps must be one of cost_grid_bps, "
+            f"got {cost:g} against {list(grid)}"
+        )
+
+    return StrategiesConfig(
+        momentum=momentum,
+        reversal=reversal,
+        breakout=breakout,
+        portfolio=PortfolioConfig(n_long=n_long, cost_bps=cost, cost_grid_bps=grid),
+    )
+
+
+def _at_least(section: dict[str, Any], key: str, where: str, minimum: int) -> int:
+    value = int(_require(section, key, where))
+    if value < minimum:
+        raise ValueError(f"{where}.{key} must be >= {minimum}, got {value}")
+    return value

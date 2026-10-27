@@ -74,3 +74,19 @@ storage:
 outputs:
   figures: true
   dpi: 150
+
+# Same rules as config/default.yml. The strategy does not depend on which
+# vendor produced the panel; only the panel does.
+strategies:
+  momentum:
+    window: 20
+    skip: 1
+  reversal:
+    return_window: 5
+    vol_window: 20
+  breakout:
+    window: 20
+  portfolio:
+    n_long: 3
+    cost_bps: 5
+    cost_grid_bps: [0, 5, 10, 25]

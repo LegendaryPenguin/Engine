@@ -7,6 +7,7 @@ Command line.
     python -m marketengine clean
     python -m marketengine analyze
     python -m marketengine bench               # latency, throughput, freshness
+    python -m marketengine backtest            # scores, simulation, comparison
     python -m marketengine query "SELECT ..."  # SQL against the curated panel
     python -m marketengine config              # resolved config + paths
 
@@ -51,6 +52,7 @@ def _parser() -> argparse.ArgumentParser:
 
     sub.add_parser("clean", help="rebuild the curated panel from stored raw data")
     sub.add_parser("analyze", help="recompute metrics and figures from the curated panel")
+    sub.add_parser("backtest", help="score the three strategies and simulate them on the curated panel")
     sub.add_parser("config", help="print the resolved configuration and output paths")
 
     bn = sub.add_parser("bench", help="measure stage timings, fetch latency and data freshness")
@@ -79,6 +81,14 @@ def _cmd_config(cfg) -> int:
     print(f"risk-free    {cfg.analytics.risk_free_annual:.4%} annual "
           f"= {cfg.analytics.risk_free_daily:.8%} daily")
     print(f"vol windows  {', '.join(str(w) for w in cfg.analytics.rolling_vol_windows)}")
+    if cfg.strategies is not None:
+        s = cfg.strategies
+        print(f"momentum    window={s.momentum.window} skip={s.momentum.skip}")
+        print(f"reversal    return={s.reversal.return_window} vol={s.reversal.vol_window}")
+        print(f"breakout    window={s.breakout.window}")
+        print(f"portfolio   top {s.portfolio.n_long}, "
+              f"{s.portfolio.cost_bps:g} bp one-way, "
+              f"grid {list(s.portfolio.cost_grid_bps)}")
     print("paths:")
     for label, path in (("raw", cfg.raw_dir), ("curated", cfg.curated_dir),
                         ("outputs", cfg.output_dir), ("reports", cfg.report_dir),
@@ -150,6 +160,15 @@ def main(argv: list[str] | None = None) -> int:
 
             panel = _store.read_curated(cfg.curated_dir)
             pipeline.stage_analyze(cfg, panel)
+            return 0
+
+        if args.command == "backtest":
+            from . import store as _store
+            from .backtest import run_backtest
+
+            panel = _store.read_curated(cfg.curated_dir)
+            run_backtest(cfg, panel)
+            print("\ndone.")
             return 0
 
         if args.command == "run":

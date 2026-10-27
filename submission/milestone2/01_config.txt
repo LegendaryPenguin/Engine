@@ -1,0 +1,25 @@
+$ C:\Users\nisch\Desktop\Engine\.venv\Scripts\python.exe -m marketengine config
+
+config       config\default.yml  (sha256 89edcc84880a7f9e…)
+run_id       baseline
+provider     yfinance
+universe     AAPL, MSFT, NVDA, JPM, XOM, JNJ, QQQ, IWM, TLT, GLD
+benchmark    SPY
+window       2015-01-01 -> latest available
+calendar     align=benchmark max_ffill_days=0
+risk-free    2.0000% annual = 0.00785849% daily
+vol windows  21, 63, 252
+momentum    window=20 skip=1
+reversal    return=5 vol=20
+breakout    window=20
+portfolio   top 3, 5 bp one-way, grid [0.0, 5.0, 10.0, 25.0]
+paths:
+  raw       data\raw\yfinance
+  curated   data\curated\baseline
+  outputs   data\outputs\baseline
+  reports   reports\baseline
+  figures   reports\baseline\figures
+  duckdb    data\marketengine.duckdb
+
+
+[exit code: 0]
