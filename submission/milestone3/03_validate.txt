@@ -1,0 +1,20 @@
+$ C:\Users\nisch\Desktop\Engine\.venv\Scripts\python.exe -m marketengine --config config/validation.yml validate
+
+[validate] chronological train / test
+      universe  62 names + SPY
+      common    2015-02-03 onward (2950 decision dates)
+      train     2015-02-03 -> 2024-06-18 (2360 decisions, 80%)
+      test      2024-06-20 -> 2026-10-26 (590 decisions, untouched)
+      boundary  2024-06-20 (first test decision)
+    name train_cagr test_cagr cagr_gap train_sharpe test_sharpe sharpe_gap
+momentum      17.9%     12.5%    -5.4%         0.80        0.60      -0.20
+reversal       9.8%      7.8%    -2.0%         0.45        0.38      -0.07
+breakout       4.7%      3.4%    -1.3%         0.24        0.16      -0.08
+      overfitting flag: none under the configured Sharpe-drop rule
+      equal-weight test CAGR 18.9% vs SPY test CAGR 16.8%
+      report  -> reports\validation\validation.md
+
+done.
+
+
+[exit code: 0]

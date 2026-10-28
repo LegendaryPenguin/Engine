@@ -1,0 +1,28 @@
+$ C:\Users\nisch\Desktop\Engine\.venv\Scripts\python.exe -m marketengine --config config/validation.yml config
+
+config       config\validation.yml  (sha256 7c2a347954540163…)
+run_id       validation
+provider     yfinance
+universe     AAPL, MSFT, NVDA, GOOGL, AMZN, META, AVGO, AMD, ORCL, CRM, ADBE, CSCO, INTC, TXN, QCOM, JPM, BAC, WFC, GS, MS, BLK, SCHW, V, MA, JNJ, UNH, PFE, MRK, ABBV, LLY, AMGN, TMO, XOM, CVX, COP, SLB, WMT, HD, COST, KO, PEP, MCD, NKE, SBUX, DIS, PG, CAT, DE, HON, UNP, BA, GE, QQQ, IWM, TLT, GLD, XLF, XLE, XLK, XLV, XLI, XLP
+benchmark    SPY
+window       2015-01-01 -> latest available
+calendar     align=benchmark max_ffill_days=0
+risk-free    2.0000% annual = 0.00785849% daily
+vol windows  21, 63, 252
+momentum    window=20 skip=1
+reversal    return=5 vol=20
+breakout    window=20
+portfolio   top 10, 5 bp one-way, grid [0.0, 5.0, 10.0, 25.0]
+            commission=1 bp, slippage=4 bp
+            max_weight=15%, max_participation=0.02
+validation  train_fraction=80%, overfit_sharpe_drop=40%
+paths:
+  raw       data\raw\yfinance
+  curated   data\curated\validation
+  outputs   data\outputs\validation
+  reports   reports\validation
+  figures   reports\validation\figures
+  duckdb    data\marketengine.duckdb
+
+
+[exit code: 0]

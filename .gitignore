@@ -5,10 +5,12 @@
 # from the config plus a network connection, so none of it belongs in git.
 data/
 
-# Generated reports are ignored EXCEPT the baseline run, which is committed
-# so the deliverable is readable on GitHub without running anything.
+# Generated reports are ignored EXCEPT the baseline and validation runs,
+# which are committed so the deliverables are readable on GitHub without
+# running anything.
 reports/*
 !reports/baseline/
+!reports/validation/
 
 # submission/ is NOT ignored. It is captured terminal output from real runs
 # and is the deliverable for grading, so it has to survive a clean clone.

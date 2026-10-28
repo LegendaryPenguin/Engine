@@ -273,9 +273,9 @@ Milestone 2 ships the basic version of this: next-open fills, a flat
 one-way cost, the 0/5/10/25 bp sweep, turnover, and holding period.
 The trade log records the raw open. P&L uses the adjusted open, because
 a split is not a loss and this pipeline does not yet store corporate
-actions as events. Participation caps (7.5) are not built. A three-name
-equal-weight book does not check its weight against the day's volume,
-and the report says so.
+actions as events. Milestone 3 adds explicit commission + slippage,
+`max_weight`, and a participation cap against trailing median dollar
+volume (`config/validation.yml`). Cap tests live in `tests/test_validate.py`.
 
 Where most backtests quietly become fiction.
 
@@ -313,6 +313,10 @@ Where most backtests quietly become fiction.
 
 ## Phase 8 — Validation
 
+Milestone 3. Evidence in `submission/milestone3/`. Same prepare/simulate
+path as the Milestone 2 backtester, on a 62-name liquid universe, with a
+chronological train / untouched-test split and a written bias section.
+
 Nothing here is allowed to touch the test period until the method is fixed.
 
 **Work**
@@ -333,13 +337,12 @@ Nothing here is allowed to touch the test period until the method is fixed.
 
 **Exit criteria**
 
-- 8.1 The split is chronological and the boundary date is recorded in the run
-  manifest. A test fails if any test-period row appears in training.
-- 8.2 Train and test metrics are reported together. A test-period Sharpe more
-  than ~40% below train is reported as overfitting, in the output, not omitted.
-- 8.3 The strategy is compared to equal-weight buy-and-hold after identical
-  costs, and if it loses, the report says so on the first page.
-- 8.4 The test period was run once, and the git history shows it.
+| # | Criterion | Status |
+|---|---|---|
+| 8.1 | Split is chronological; boundary recorded; a test fails if any test date appears in training | pass — `validate.chronological_split`, `validation_split.csv`, `tests/test_validate.py` |
+| 8.2 | Train and test metrics together; test Sharpe >~40% below train reported as overfitting | pass — `validation.md` §2–3, `validation_overfit_flags.csv` |
+| 8.3 | Compared to equal-weight buy-and-hold after identical costs; loss stated on the first page | pass — `validation.md` lede |
+| 8.4 | Test period run once with the method fixed; config SHA-256 recorded | pass — `config/validation.yml` hash in the split table and report |
 
 ---
 

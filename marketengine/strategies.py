@@ -116,24 +116,47 @@ def target_weights(scores: pd.DataFrame, n_long: int) -> pd.DataFrame:
     concentrating into whatever happened to have data would turn missing
     history into a bigger bet.
 
-    Ties break toward the alphabetically earlier symbol. That is
-    arbitrary and, more importantly, deterministic: the same scores
-    always produce the same book, which a `method="first"` rank on an
-    unsorted column axis would not.
+    Ties break toward the alphabetically earlier symbol. Columns are
+    sorted first so a `method="first"` rank is deterministic rather than
+    dependent on whatever order the scores arrived in.
     """
     if n_long < 1:
         raise ValueError(f"n_long must be >= 1, got {n_long}")
     scores = scores.reindex(sorted(scores.columns), axis=1)
-    out = pd.DataFrame(0.0, index=scores.index, columns=scores.columns)
-    slot = 1.0 / n_long
-    for dt, row in scores.iterrows():
-        eligible = row.dropna()
-        if eligible.empty:
-            continue
-        # mergesort is stable, so equal scores keep alphabetical order.
-        chosen = eligible.sort_values(ascending=False, kind="mergesort").index[:n_long]
-        out.loc[dt, chosen] = slot
-    return out
+    # Higher score -> better (lower) rank. First among ties = earlier column.
+    ranks = scores.rank(axis=1, method="first", ascending=False, na_option="keep")
+    selected = ranks.le(n_long) & scores.notna()
+    return selected.astype(float) * (1.0 / n_long)
+
+
+def apply_portfolio_caps(weights: pd.DataFrame, dollar_volume: pd.DataFrame, *,
+                         max_weight: float | None,
+                         max_participation: float | None,
+                         adv_window: int,
+                         assumed_nav_usd: float) -> pd.DataFrame:
+    """Clip target weights. Clipped mass stays cash; it is not redistributed.
+
+    `max_weight` is a hard position cap. `max_participation` caps the
+    notional of a name at `participation * trailing median dollar volume`
+    for an assumed book of `assumed_nav_usd`. A signal that wants more is
+    clipped rather than silently filled at an untradeable size.
+    """
+    out = weights.astype(float).copy()
+    if max_weight is not None:
+        out = out.clip(upper=max_weight)
+    if max_participation is not None:
+        if assumed_nav_usd <= 0:
+            raise ValueError("assumed_nav_usd must be > 0 when max_participation is set")
+        if adv_window < 2:
+            raise ValueError(f"adv_window must be >= 2, got {adv_window}")
+        adv = (dollar_volume.reindex(index=out.index, columns=out.columns)
+               .rolling(window=adv_window, min_periods=adv_window)
+               .median())
+        liq_cap = (max_participation * adv) / assumed_nav_usd
+        out = out.clip(upper=liq_cap)
+        # A missing ADV cannot justify a position of any size.
+        out = out.where(adv.notna() & (adv > 0), 0.0)
+    return out.fillna(0.0)
 
 
 def first_invested(weights: pd.DataFrame) -> pd.Timestamp:

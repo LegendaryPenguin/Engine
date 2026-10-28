@@ -250,6 +250,30 @@ def plot_strategy_drawdown(returns: pd.DataFrame, path: Path, dpi: int = 150) ->
     return _save(fig, path, dpi)
 
 
+def plot_train_test_bars(train_books: dict, test_books: dict, path: Path,
+                         dpi: int = 150, *, periods: int = 252) -> Path:
+    """Side-by-side CAGR bars for train and test. The gap is the point."""
+    names = [n for n in ("momentum", "reversal", "breakout", "equal_weight")
+             if n in train_books and n in test_books]
+    # Include the benchmark last if present.
+    for key in train_books:
+        if key not in names and key in test_books:
+            names.append(key)
+    train_c = [analytics.annualised_return(train_books[n].returns, periods) for n in names]
+    test_c = [analytics.annualised_return(test_books[n].returns, periods) for n in names]
+    x = np.arange(len(names))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.bar(x - width / 2, train_c, width, label="train", color="#1F4E79")
+    ax.bar(x + width / 2, test_c, width, label="test", color="#C65911")
+    ax.axhline(0.0, color="#888888", linewidth=0.8)
+    ax.set_xticks(x, names, rotation=20, ha="right")
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1.0))
+    _style_axes(ax, "CAGR on the training window vs the untouched test window", "CAGR")
+    ax.legend(fontsize=8, frameon=False, loc="best")
+    return _save(fig, path, dpi)
+
+
 def plot_cost_sweep(cost_grid: pd.DataFrame, path: Path, dpi: int = 150) -> Path:
     """CAGR of each strategy, and of the benchmark, as one-way cost rises.
 

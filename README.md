@@ -29,9 +29,18 @@ equal-weight buy-and-hold of the same names.
 file that shows it. The run itself is
 [`reports/baseline/backtest.md`](reports/baseline/backtest.md).
 
+**Grading Milestone 3?** [`submission/milestone3/`](submission/milestone3/) is
+the reusable backtester on a **62-name** universe, with configurable
+commission/slippage, position and participation caps, a chronological
+train/untouched-test split, overfit flags, and a written bias analysis.
+[`RUBRIC.md`](submission/milestone3/RUBRIC.md) maps each rubric line to the
+file that shows it. The run itself is
+[`reports/validation/validation.md`](reports/validation/validation.md)
+(`config/validation.yml`).
+
 [`ROADMAP.md`](ROADMAP.md) is where this goes next. The end state is a
-research engine that can identify names and, later, trade them. Milestone 2
-is the first time a score becomes a position. It does not place orders.
+research engine that can identify names and, later, trade them. Milestone 3
+validates the rules out of sample. It still does not place orders.
 
 ---
 
@@ -72,12 +81,14 @@ python -m marketengine bench                 # stage timings, fetch latency, dat
 python -m marketengine bench --no-network    # compute only, no API calls
 python -m marketengine query "SELECT symbol, count(*) FROM prices_baseline GROUP BY 1"
 python -m marketengine backtest             # scores, simulation, comparison. No network
+python -m marketengine --config config/validation.yml run       # 62-name panel + validate
+python -m marketengine --config config/validation.yml validate  # train/test only. No network
 ```
 
-`backtest` reads the curated panel and does not download anything. `run`
-calls it at the end when the config has a `strategies:` section, which
-`config/default.yml` does. The rules, the top-N book, and the cost
-assumption all live in that section. They are not in the code.
+`backtest` and `validate` read the curated panel and do not download
+anything. `run` calls them when the config has `strategies:` /
+`validation:` blocks. The rules, costs, caps, and the train fraction live
+in YAML. They are not in the code.
 
 `analyze` is the one used most while iterating: it re-reads the curated
 Parquet and touches no network, so changing a metric or a chart costs no
@@ -86,7 +97,7 @@ API calls and no waiting.
 ### Tests
 
 ```bash
-./.venv/bin/pytest -q      # 143 passed, 2 skipped without Alpaca credentials
+./.venv/bin/pytest -q      # 152 passed, 2 skipped without Alpaca credentials
 ```
 
 Two tests hit the network and the rest do not. The provider adapters are

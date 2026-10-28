@@ -8,6 +8,8 @@ Command line.
     python -m marketengine analyze
     python -m marketengine bench               # latency, throughput, freshness
     python -m marketengine backtest            # scores, simulation, comparison
+    python -m marketengine validate            # chronological train / test
+    python -m marketengine search              # train-only grid; sealed test once
     python -m marketengine query "SELECT ..."  # SQL against the curated panel
     python -m marketengine config              # resolved config + paths
 
@@ -53,6 +55,8 @@ def _parser() -> argparse.ArgumentParser:
     sub.add_parser("clean", help="rebuild the curated panel from stored raw data")
     sub.add_parser("analyze", help="recompute metrics and figures from the curated panel")
     sub.add_parser("backtest", help="score the three strategies and simulate them on the curated panel")
+    sub.add_parser("validate", help="chronological train/test validation on the curated panel")
+    sub.add_parser("search", help="train-only configuration search; sealed test for the winner only")
     sub.add_parser("config", help="print the resolved configuration and output paths")
 
     bn = sub.add_parser("bench", help="measure stage timings, fetch latency and data freshness")
@@ -89,6 +93,16 @@ def _cmd_config(cfg) -> int:
         print(f"portfolio   top {s.portfolio.n_long}, "
               f"{s.portfolio.cost_bps:g} bp one-way, "
               f"grid {list(s.portfolio.cost_grid_bps)}")
+        if s.portfolio.commission_bps is not None:
+            print(f"            commission={s.portfolio.commission_bps:g} bp, "
+                  f"slippage={s.portfolio.slippage_bps:g} bp")
+        if s.portfolio.max_weight is not None:
+            print(f"            max_weight={s.portfolio.max_weight:.0%}, "
+                  f"max_participation={s.portfolio.max_participation}")
+    if cfg.validation is not None:
+        v = cfg.validation
+        print(f"validation  train_fraction={v.train_fraction:.0%}, "
+              f"overfit_sharpe_drop={v.overfitting_sharpe_drop:.0%}")
     print("paths:")
     for label, path in (("raw", cfg.raw_dir), ("curated", cfg.curated_dir),
                         ("outputs", cfg.output_dir), ("reports", cfg.report_dir),
@@ -168,6 +182,24 @@ def main(argv: list[str] | None = None) -> int:
 
             panel = _store.read_curated(cfg.curated_dir)
             run_backtest(cfg, panel)
+            print("\ndone.")
+            return 0
+
+        if args.command == "validate":
+            from . import store as _store
+            from .validate import run_validation
+
+            panel = _store.read_curated(cfg.curated_dir)
+            run_validation(cfg, panel)
+            print("\ndone.")
+            return 0
+
+        if args.command == "search":
+            from . import store as _store
+            from .search import run_search
+
+            panel = _store.read_curated(cfg.curated_dir)
+            run_search(cfg, panel)
             print("\ndone.")
             return 0
 

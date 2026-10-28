@@ -13,9 +13,10 @@ a score becomes a position. Later milestones extend both.
     features    pure functions: trailing return, volatility, distance to high
     strategies  pure functions: scores per (date, symbol), no positions
     backtest    next-open simulation, costs, comparison to benchmarks
+    validate    chronological train/test, overfit flags, bias report
     plots       figures
     report      run manifest + Markdown summary
-    pipeline    ingest, clean, analyze, report, then the backtest
+    pipeline    ingest, clean, analyze, report, backtest, validate
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

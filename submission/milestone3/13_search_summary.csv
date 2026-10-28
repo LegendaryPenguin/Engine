@@ -1,0 +1,2 @@
+n_trials,n_ok,boundary,winner_trial_id,winner_label,winner_family,selection_rule,train_sharpe,train_cagr,train_beats_ew,test_sharpe,test_cagr,test_max_drawdown,test_ew_cagr,test_ew_sharpe,test_beats_ew,config_sha256
+42,42,2024-06-20,12,mom_126d_skip21_top5,momentum,max train Sharpe; tie-break train CAGR,1.133424389,0.2597992778,True,0.4104181913,0.09428212832,-0.2238238374,0.1891041029,1.103892759,False,7c2a3479545401637ca2e40770d5915326dcb508e607a43f88a5ad06968eb9e8

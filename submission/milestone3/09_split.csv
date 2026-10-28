@@ -1,0 +1,2 @@
+train_fraction,boundary,train_start,train_end,test_start,test_end,n_train,n_test,config_sha256
+0.8,2024-06-20,2015-02-03,2024-06-18,2024-06-20,2026-10-26,2360,590,7c2a3479545401637ca2e40770d5915326dcb508e607a43f88a5ad06968eb9e8

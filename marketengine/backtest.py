@@ -266,22 +266,26 @@ def _lookup(frame: pd.DataFrame, dates: pd.Series, symbols: pd.Series) -> np.nda
     return out
 
 
-def _metrics_row(name: str, kind: str, book: BookResult, spy_returns: pd.Series,
-                 rf_daily: float, periods: int) -> dict[str, object]:
+def metrics_row(name: str, kind: str, book: BookResult, bench_returns: pd.Series,
+                rf_daily: float, periods: int, *, split: str | None = None) -> dict[str, object]:
+    """Performance / risk metrics for one book. Pure of I/O."""
     rets = book.returns
     dd = analytics.max_drawdown(rets)
-    capm = analytics.beta_alpha(rets, spy_returns, rf_daily, periods)
+    capm = analytics.beta_alpha(rets, bench_returns, rf_daily, periods)
     total = float((1.0 + rets).prod() - 1.0) if len(rets) else float("nan")
-    return {
+    row = {
         "name": name,
         "kind": kind,
         "cagr": analytics.annualised_return(rets, periods),
         "ann_volatility": analytics.annualised_volatility(rets, periods),
         "sharpe": analytics.sharpe_ratio(rets, rf_daily, periods),
+        "sortino": analytics.sortino_ratio(rets, rf_daily, periods),
         "max_drawdown": dd["max_drawdown"],
         "drawdown_peak": dd["peak_date"],
         "drawdown_trough": dd["trough_date"],
         "hit_rate": analytics.hit_rate(rets),
+        # Empirical 5% VaR of daily returns. Not a Gaussian approximation.
+        "var_95": analytics.historical_var(rets, 0.95),
         "total_return": total,
         "final_nav": float(book.ledger["nav"].iloc[-1]) if len(book.ledger) else float("nan"),
         "avg_holding_sessions": book.average_holding_sessions,
@@ -292,20 +296,38 @@ def _metrics_row(name: str, kind: str, book: BookResult, spy_returns: pd.Series,
         "n_obs": int(len(rets)),
         "first_mark": rets.index[0] if len(rets) else pd.NaT,
         "last_mark": rets.index[-1] if len(rets) else pd.NaT,
+        "n_trades": int(len(book.trades)),
+        "mean_gross_exposure": float(book.positions.groupby("decision_date")["weight"].sum().mean())
+            if len(book.positions) else float("nan"),
     }
+    if split is not None:
+        row["split"] = split
+    return row
 
 
-def _cagr_at_cost(weights: pd.DataFrame, raw_open: pd.DataFrame, adj_open: pd.DataFrame,
-                  cost_bps: float, periods: int) -> float:
-    book = simulate(weights, raw_open, adj_open, cost_bps, name="grid")
-    return analytics.annualised_return(book.returns, periods)
+# Kept for callers that imported the private name during Milestone 2.
+_metrics_row = metrics_row
 
 
-def run_backtest(cfg: Config, panel: pd.DataFrame) -> BacktestOutput:
-    """Score, simulate, and write the Milestone 2 artefacts.
+@dataclass
+class PreparedBooks:
+    """Scores and target weights ready to simulate on any date window."""
 
-    Reads the curated panel only. No network. The same panel `analyze`
-    already proved it can rebuild from Parquet.
+    common_start: pd.Timestamp
+    tradable: list[str]
+    raw_open: pd.DataFrame
+    adj_open: pd.DataFrame
+    scores: dict[str, pd.DataFrame]
+    weights: dict[str, pd.DataFrame]
+    dollar_volume: pd.DataFrame
+
+
+def prepare_books(cfg: Config, panel: pd.DataFrame) -> PreparedBooks:
+    """Score the panel and build capped target weights. No simulation yet.
+
+    Separating prepare from simulate is what makes the same backtester
+    reusable for a full-sample run and for chronological train/test
+    windows without recomputing features twice with different rules.
     """
     if cfg.strategies is None:
         raise ValueError(
@@ -315,21 +337,22 @@ def run_backtest(cfg: Config, panel: pd.DataFrame) -> BacktestOutput:
     spec = cfg.strategies
     tradable = list(cfg.universe.tickers)
     bench = cfg.universe.benchmark
-    an = cfg.analytics
-
+    present = set(panel["symbol"].unique())
     for sym in (*tradable, bench):
-        # Fail here, with the symbol's name, rather than on a KeyError
-        # inside a ranking a thousand rows later.
-        if sym not in set(panel["symbol"].unique()):
+        if sym not in present:
             raise ValueError(
                 f"{sym} is in the config but has no rows in the curated panel. "
-                "Run `python -m marketengine run` before `backtest`."
+                "Run `python -m marketengine run` before `backtest` / `validate`."
             )
 
     raw_open = store.wide(panel, "open")
     close = store.wide(panel, "close")
     adj_close = store.wide(panel, "adj_close")
+    volume = store.wide(panel, "volume")
     adj_open = features.adjusted_open(raw_open, close, adj_close)
+    # Dollar volume uses the as-traded close and volume: that is the
+    # liquidity that was on the tape, not a total-return reconstruction.
+    dollar_volume = close.reindex(columns=tradable) * volume.reindex(columns=tradable)
 
     prices = adj_close.reindex(columns=tradable)
     score_map = strategies.score_all(
@@ -344,79 +367,160 @@ def run_backtest(cfg: Config, panel: pd.DataFrame) -> BacktestOutput:
         name: strategies.target_weights(frame, spec.portfolio.n_long)
         for name, frame in score_map.items()
     }
+    weight_map = {
+        name: strategies.apply_portfolio_caps(
+            frame,
+            dollar_volume,
+            max_weight=spec.portfolio.max_weight,
+            max_participation=spec.portfolio.max_participation,
+            adv_window=spec.portfolio.adv_window,
+            assumed_nav_usd=spec.portfolio.assumed_nav_usd,
+        )
+        for name, frame in weight_map.items()
+    }
     common = max(strategies.first_invested(w) for w in weight_map.values())
-    # One window for every book, including the benchmarks. Counting the
-    # warmup — weeks of cash while the first window fills — as a flat
-    # investment would make every CAGR look worse for a reason that has
-    # nothing to do with the rule.
     weight_map = {name: frame.loc[common:] for name, frame in weight_map.items()}
     score_window = {name: frame.loc[common:] for name, frame in score_map.items()}
+    return PreparedBooks(
+        common_start=common,
+        tradable=tradable,
+        raw_open=raw_open,
+        adj_open=adj_open,
+        scores=score_window,
+        weights=weight_map,
+        dollar_volume=dollar_volume.loc[common:],
+    )
 
-    print("[backtest] scoring and simulating")
-    print(f"      common window starts {common.date()} "
-          f"(warmup before every strategy can fire is dropped)")
-    print(f"      long-only top {spec.portfolio.n_long} of {len(tradable)}, "
-          f"equal weight, {spec.portfolio.cost_bps:g} bp one-way")
+
+def simulate_prepared(prepared: PreparedBooks, cfg: Config, *,
+                      decision_index: pd.DatetimeIndex | None = None,
+                      cost_bps: float | None = None,
+                      name_suffix: str = "") -> dict[str, BookResult]:
+    """Simulate strategies and both benchmarks on a decision window."""
+    spec = cfg.strategies
+    assert spec is not None
+    bench = cfg.universe.benchmark
+    cost = spec.portfolio.cost_bps if cost_bps is None else cost_bps
+    if decision_index is None:
+        decision_index = prepared.weights["momentum"].index
+    else:
+        decision_index = pd.DatetimeIndex(decision_index).intersection(
+            prepared.weights["momentum"].index)
 
     books: dict[str, BookResult] = {}
-    for name, weights in weight_map.items():
-        books[name] = simulate(weights, raw_open, adj_open, spec.portfolio.cost_bps, name=name)
+    for name, weights in prepared.weights.items():
+        w = weights.reindex(decision_index).fillna(0.0)
+        label = f"{name}{name_suffix}"
+        books[name] = simulate(w, prepared.raw_open, prepared.adj_open, cost, name=label)
 
-    decision_index = weight_map["momentum"].index
-    ew_weights = pd.DataFrame(1.0 / len(tradable), index=decision_index, columns=tradable)
-    spy_weights = pd.DataFrame({bench: 1.0}, index=decision_index)
+    ew = pd.DataFrame(1.0 / len(prepared.tradable), index=decision_index,
+                      columns=prepared.tradable)
+    if spec.portfolio.max_weight is not None or spec.portfolio.max_participation is not None:
+        ew = strategies.apply_portfolio_caps(
+            ew, prepared.dollar_volume,
+            max_weight=spec.portfolio.max_weight,
+            max_participation=spec.portfolio.max_participation,
+            adv_window=spec.portfolio.adv_window,
+            assumed_nav_usd=spec.portfolio.assumed_nav_usd,
+        )
+    spy = pd.DataFrame({bench: 1.0}, index=decision_index)
     books[BENCHMARK_EW] = simulate(
-        ew_weights, raw_open, adj_open, spec.portfolio.cost_bps, name=BENCHMARK_EW)
+        ew, prepared.raw_open, prepared.adj_open, cost, name=f"{BENCHMARK_EW}{name_suffix}")
     books[bench] = simulate(
-        spy_weights, raw_open, adj_open, spec.portfolio.cost_bps, name=bench)
+        spy, prepared.raw_open, prepared.adj_open, cost, name=f"{bench}{name_suffix}")
+    return books
 
-    bench_rets = books[bench].returns
-    rows = []
-    for name in (*strategies.NAMES, BENCHMARK_EW, bench):
-        kind = "benchmark" if name in (BENCHMARK_EW, bench) else "strategy"
-        rows.append(_metrics_row(name, kind, books[name], bench_rets,
-                                 an.risk_free_daily, an.trading_days_per_year))
-    summary = pd.DataFrame(rows)
 
-    # The cost sweep reuses the same weights. Resimulating is the point:
-    # a strategy whose edge is gone at 10 bp does not have an edge, and
-    # the only way to see that is to charge it.
+def cost_sweep(prepared: PreparedBooks, cfg: Config,
+               decision_index: pd.DatetimeIndex | None = None) -> tuple[pd.DataFrame, dict[str, float]]:
+    """CAGR at each configured cost, plus breakeven versus the benchmark."""
+    spec = cfg.strategies
+    assert spec is not None
+    bench = cfg.universe.benchmark
+    an = cfg.analytics
     grid = list(spec.portfolio.cost_grid_bps)
-    grid_rows: list[dict[str, object]] = []
-    grid_names = (*strategies.NAMES, bench)
-    cagr_by_cost: dict[str, list[float]] = {name: [] for name in grid_names}
-    weight_for_grid: dict[str, pd.DataFrame] = {**weight_map, bench: spy_weights}
+    if decision_index is None:
+        decision_index = prepared.weights["momentum"].index
+
+    cagr_by_cost: dict[str, list[float]] = {
+        name: [] for name in (*strategies.NAMES, bench)
+    }
     for bps in grid:
-        for name, weights in weight_for_grid.items():
-            cagr = _cagr_at_cost(weights, raw_open, adj_open, bps, an.trading_days_per_year)
-            cagr_by_cost[name].append(cagr)
+        books = simulate_prepared(prepared, cfg, decision_index=decision_index, cost_bps=bps)
+        for name in cagr_by_cost:
+            cagr_by_cost[name].append(
+                analytics.annualised_return(books[name].returns, an.trading_days_per_year))
+
+    rows: list[dict[str, object]] = []
     for name in strategies.NAMES:
         for i, bps in enumerate(grid):
             bench_cagr = cagr_by_cost[bench][i]
             cagr = cagr_by_cost[name][i]
-            grid_rows.append({
+            rows.append({
                 "name": name,
                 "cost_bps": bps,
                 "cagr": cagr,
                 "benchmark_cagr": bench_cagr,
                 "excess_cagr": cagr - bench_cagr,
             })
-    cost_grid = pd.DataFrame(grid_rows)
+    cost_grid = pd.DataFrame(rows)
     breakeven = {
         name: breakeven_cost_bps(
             grid, [c - s for c, s in zip(cagr_by_cost[name], cagr_by_cost[bench])])
         for name in strategies.NAMES
     }
+    return cost_grid, breakeven
 
-    score_corr = strategies.score_correlation(score_window)
 
-    _write_tables(cfg, score_window, weight_map, books, summary, cost_grid, score_corr)
+def run_backtest(cfg: Config, panel: pd.DataFrame) -> BacktestOutput:
+    """Score, simulate, and write the backtest artefacts.
+
+    Reads the curated panel only. No network. The same prepare/simulate
+    path is what `validate` reuses on chronological windows.
+    """
+    if cfg.strategies is None:
+        raise ValueError(
+            "config has no `strategies:` section, so there is nothing to backtest. "
+            "See config/default.yml."
+        )
+    spec = cfg.strategies
+    bench = cfg.universe.benchmark
+    an = cfg.analytics
+    prepared = prepare_books(cfg, panel)
+
+    print("[backtest] scoring and simulating")
+    print(f"      common window starts {prepared.common_start.date()} "
+          f"(warmup before every strategy can fire is dropped)")
+    cost_note = f"{spec.portfolio.cost_bps:g} bp one-way"
+    if spec.portfolio.commission_bps is not None:
+        cost_note += (f" ({spec.portfolio.commission_bps:g} commission + "
+                      f"{spec.portfolio.slippage_bps:g} slippage)")
+    print(f"      long-only top {spec.portfolio.n_long} of {len(prepared.tradable)}, "
+          f"{cost_note}")
+    if spec.portfolio.max_weight is not None:
+        print(f"      max_weight={spec.portfolio.max_weight:.0%}, "
+              f"max_participation={spec.portfolio.max_participation}, "
+              f"assumed_nav=${spec.portfolio.assumed_nav_usd:,.0f}")
+
+    books = simulate_prepared(prepared, cfg)
+    bench_rets = books[bench].returns
+    rows = []
+    for name in (*strategies.NAMES, BENCHMARK_EW, bench):
+        kind = "benchmark" if name in (BENCHMARK_EW, bench) else "strategy"
+        rows.append(metrics_row(name, kind, books[name], bench_rets,
+                                an.risk_free_daily, an.trading_days_per_year))
+    summary = pd.DataFrame(rows)
+
+    cost_grid, breakeven = cost_sweep(prepared, cfg)
+    score_corr = strategies.score_correlation(prepared.scores)
+
+    _write_tables(cfg, prepared.scores, prepared.weights, books, summary, cost_grid, score_corr)
     figures = _write_figures(cfg, books, cost_grid, summary)
     from . import backtest_report
 
     report_path = backtest_report.write_report(
         cfg,
-        common_start=common,
+        common_start=prepared.common_start,
         books=books,
         summary=summary,
         cost_grid=cost_grid,
@@ -428,10 +532,10 @@ def run_backtest(cfg: Config, panel: pd.DataFrame) -> BacktestOutput:
     print(f"      report  -> {report_path}")
 
     return BacktestOutput(
-        common_start=common,
+        common_start=prepared.common_start,
         books=books,
-        scores=score_window,
-        weights=weight_map,
+        scores=prepared.scores,
+        weights=prepared.weights,
         summary=summary,
         cost_grid=cost_grid,
         breakeven_bps=breakeven,

@@ -1,0 +1,20 @@
+$ C:\Users\nisch\Desktop\Engine\.venv\Scripts\python.exe -m marketengine --config config/validation.yml search
+
+[search] train-only configuration search
+      boundary  2024-06-20 (fixed before any trial)
+      train     2015-02-03 -> 2024-06-18 (2360 decisions)
+      test      sealed until winner selected (590 decisions)
+      trials    42 (literature-shaped grid × n_long; costs/caps fixed)
+      trial 1/42  mom_10d_top5  train Sharpe=0.30
+      trial 10/42  mom_60d_skip1_top5  train Sharpe=0.94
+      trial 20/42  rev_3d_vol10_top10  train Sharpe=0.42
+      trial 30/42  rev_20d_vol60_top15  train Sharpe=0.49
+      trial 40/42  brk_120d_top5  train Sharpe=0.20
+      winner    mom_126d_skip21_top5  train Sharpe=1.13  train CAGR=26.0%  (selected on train only)
+      sealed test CAGR=9.4%  Sharpe=0.41  EW test CAGR=18.9%  loses to equal-weight
+      report  -> reports\validation\search.md
+
+done.
+
+
+[exit code: 0]

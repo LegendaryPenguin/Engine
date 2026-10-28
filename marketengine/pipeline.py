@@ -187,4 +187,9 @@ def run(cfg: Config, *, refresh: bool = False) -> dict[str, Path]:
 
         result = run_backtest(cfg, panel)
         paths["backtest"] = Path(result.report_path)
+    if cfg.validation is not None:
+        from .validate import run_validation
+
+        result = run_validation(cfg, panel)
+        paths["validation"] = Path(result.report_path)
     return paths

@@ -112,6 +112,14 @@ class PortfolioConfig:
     n_long: int
     cost_bps: float
     cost_grid_bps: tuple[float, ...]
+    # Milestone 3: explicit commission + slippage that sum to cost_bps.
+    # Older configs omit them; the simulator then treats cost_bps as one number.
+    commission_bps: float | None = None
+    slippage_bps: float | None = None
+    max_weight: float | None = None
+    max_participation: float | None = None
+    adv_window: int = 20
+    assumed_nav_usd: float = 1_000_000.0
 
 
 @dataclass(frozen=True)
@@ -127,6 +135,14 @@ class StrategiesConfig:
 
 
 @dataclass(frozen=True)
+class ValidationConfig:
+    """Chronological train / untouched-test split for Milestone 3."""
+
+    train_fraction: float
+    overfitting_sharpe_drop: float
+
+
+@dataclass(frozen=True)
 class Config:
     run_id: str
     provider: str
@@ -139,6 +155,7 @@ class Config:
     source_path: Path
     source_sha256: str
     strategies: StrategiesConfig | None = None
+    validation: ValidationConfig | None = None
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
 
     # ---- where things go -------------------------------------------
@@ -297,6 +314,7 @@ def load_config(path: str | Path) -> Config:
     outputs = OutputConfig(figures=bool(out.get("figures", True)), dpi=int(out.get("dpi", 150)))
 
     strategies = _parse_strategies(doc.get("strategies"))
+    validation = _parse_validation(doc.get("validation"))
 
     return Config(
         run_id=run_id,
@@ -310,6 +328,7 @@ def load_config(path: str | Path) -> Config:
         source_path=path,
         source_sha256=sha,
         strategies=strategies,
+        validation=validation,
         raw=doc,
     )
 
@@ -358,12 +377,75 @@ def _parse_strategies(section: Any) -> StrategiesConfig | None:
             f"got {cost:g} against {list(grid)}"
         )
 
+    commission = port.get("commission_bps")
+    slippage = port.get("slippage_bps")
+    if commission is None and slippage is None:
+        commission_bps = None
+        slippage_bps = None
+    else:
+        if commission is None or slippage is None:
+            raise ValueError(
+                "strategies.portfolio: set both commission_bps and slippage_bps, or neither"
+            )
+        commission_bps = float(commission)
+        slippage_bps = float(slippage)
+        if commission_bps < 0 or slippage_bps < 0:
+            raise ValueError("strategies.portfolio: commission_bps and slippage_bps must be >= 0")
+        if abs((commission_bps + slippage_bps) - cost) > 1e-9:
+            raise ValueError(
+                "strategies.portfolio.cost_bps must equal commission_bps + slippage_bps, "
+                f"got {cost:g} vs {commission_bps:g}+{slippage_bps:g}"
+            )
+
+    max_weight = port.get("max_weight")
+    if max_weight is not None:
+        max_weight = float(max_weight)
+        if not (0 < max_weight <= 1):
+            raise ValueError("strategies.portfolio.max_weight must be in (0, 1]")
+
+    max_participation = port.get("max_participation")
+    if max_participation is not None:
+        max_participation = float(max_participation)
+        if not (0 < max_participation <= 1):
+            raise ValueError("strategies.portfolio.max_participation must be in (0, 1]")
+
+    adv_window = int(port.get("adv_window", 20))
+    if adv_window < 2:
+        raise ValueError("strategies.portfolio.adv_window must be >= 2")
+    assumed_nav = float(port.get("assumed_nav_usd", 1_000_000.0))
+    if assumed_nav <= 0:
+        raise ValueError("strategies.portfolio.assumed_nav_usd must be > 0")
+
     return StrategiesConfig(
         momentum=momentum,
         reversal=reversal,
         breakout=breakout,
-        portfolio=PortfolioConfig(n_long=n_long, cost_bps=cost, cost_grid_bps=grid),
+        portfolio=PortfolioConfig(
+            n_long=n_long,
+            cost_bps=cost,
+            cost_grid_bps=grid,
+            commission_bps=commission_bps,
+            slippage_bps=slippage_bps,
+            max_weight=max_weight,
+            max_participation=max_participation,
+            adv_window=adv_window,
+            assumed_nav_usd=assumed_nav,
+        ),
     )
+
+
+def _parse_validation(section: Any) -> ValidationConfig | None:
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise ValueError("validation: expected a mapping")
+    frac = float(_require(section, "train_fraction", "validation"))
+    if not (0.5 <= frac < 1.0):
+        raise ValueError("validation.train_fraction must be in [0.5, 1)")
+    drop = float(section.get("overfitting_sharpe_drop", 0.40))
+    if not (0 < drop < 1):
+        raise ValueError("validation.overfitting_sharpe_drop must be in (0, 1)")
+    return ValidationConfig(train_fraction=frac, overfitting_sharpe_drop=drop)
 
 
 def _at_least(section: dict[str, Any], key: str, where: str, minimum: int) -> int:

@@ -1,0 +1,154 @@
+# =====================================================================
+# MarketEngine — Milestone 3 validation run.
+#
+# Same strategies as baseline, on a much larger liquid universe, with a
+# chronological train / untouched-test split. Parameters were fixed in
+# Milestone 2 and are not retuned against the test window.
+#
+#   python -m marketengine --config config/validation.yml run
+#   python -m marketengine --config config/validation.yml validate
+# =====================================================================
+
+run_id: validation
+provider: yfinance
+
+universe:
+  # Broad liquid US names + sector / factor ETFs. Still survivors that
+  # exist today — that bias is named in the validation report, not
+  # cured by listing more tickers.
+  tickers:
+    # Technology
+    - AAPL
+    - MSFT
+    - NVDA
+    - GOOGL
+    - AMZN
+    - META
+    - AVGO
+    - AMD
+    - ORCL
+    - CRM
+    - ADBE
+    - CSCO
+    - INTC
+    - TXN
+    - QCOM
+    # Financials
+    - JPM
+    - BAC
+    - WFC
+    - GS
+    - MS
+    - BLK
+    - SCHW
+    - V
+    - MA
+    # Health care
+    - JNJ
+    - UNH
+    - PFE
+    - MRK
+    - ABBV
+    - LLY
+    - AMGN
+    - TMO
+    # Energy
+    - XOM
+    - CVX
+    - COP
+    - SLB
+    # Consumer
+    - WMT
+    - HD
+    - COST
+    - KO
+    - PEP
+    - MCD
+    - NKE
+    - SBUX
+    - DIS
+    - PG
+    # Industrials / other
+    - CAT
+    - DE
+    - HON
+    - UNP
+    - BA
+    - GE
+    # Liquid ETFs (rates, gold, sectors, size)
+    - QQQ
+    - IWM
+    - TLT
+    - GLD
+    - XLF
+    - XLE
+    - XLK
+    - XLV
+    - XLI
+    - XLP
+  benchmark: SPY
+
+window:
+  start: "2015-01-01"
+  end: null
+
+calendar:
+  align: benchmark
+  max_ffill_days: 0
+
+analytics:
+  rolling_vol_windows: [21, 63, 252]
+  corr_window: 63
+  risk_free_annual: 0.02
+  trading_days_per_year: 252
+  min_history_days: 250
+  extreme_return_threshold: 0.50
+  extreme_return_vol_units: 8.0
+  quality_vol_window: 20
+  stale_price_sessions: 3
+
+storage:
+  root: data
+  duckdb_file: marketengine.duckdb
+
+outputs:
+  figures: true
+  dpi: 150
+
+strategies:
+  momentum:
+    window: 20
+    skip: 1
+  reversal:
+    return_window: 5
+    vol_window: 20
+  breakout:
+    window: 20
+  portfolio:
+    # Top 10 of ~60 names. Equal weight before caps.
+    n_long: 10
+    # One-way cost = commission + slippage. The simulator charges their sum.
+    commission_bps: 1
+    slippage_bps: 4
+    cost_bps: 5
+    cost_grid_bps: [0, 5, 10, 25]
+    # Hard position cap. 15% of a unit book, clipped, not redistributed.
+    max_weight: 0.15
+    # Cannot demand more than 2% of trailing median dollar volume at the
+    # assumed book size. A backtest that buys 40% of a day's volume is
+    # measuring nothing.
+    max_participation: 0.02
+    adv_window: 20
+    assumed_nav_usd: 1000000
+
+# =====================================================================
+# Milestone 3 — chronological out-of-sample validation.
+# The boundary is computed from the tradable window AFTER warmup, so
+# every strategy can fire on both sides. The test window is untouched
+# by parameter choice: these numbers were fixed before this run.
+# =====================================================================
+validation:
+  train_fraction: 0.80
+  # Test Sharpe more than this fraction below train Sharpe is reported
+  # as overfitting in the output, not omitted.
+  overfitting_sharpe_drop: 0.40
